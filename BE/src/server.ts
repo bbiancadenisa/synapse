@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 import app from './app';
 import { pool } from './config/db';
 dotenv.config();
+// eslint-disable-next-line
+import './ws/websocketServer';
 
 const PORT = process.env.PORT;
 

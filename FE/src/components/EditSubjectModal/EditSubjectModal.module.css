@@ -1,0 +1,12 @@
+.wrapper {
+  padding-top: 10px;
+}
+
+.wrapper :global(.MuiTextField-root) {
+  background: #fff;
+  border-radius: 12px;
+}
+
+.wrapper :global(.MuiInputBase-root) {
+  border-radius: 12px;
+}
