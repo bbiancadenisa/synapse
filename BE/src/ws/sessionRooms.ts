@@ -12,6 +12,10 @@ export const joinSessionRoom = (sessionId: number, ws: WebSocket) => {
 
 export const leaveSessionRoom = (sessionId: number, ws: WebSocket) => {
   sessionRooms.get(sessionId)?.delete(ws);
+
+  if (sessionRooms.get(sessionId)?.size === 0) {
+    sessionRooms.delete(sessionId);
+  }
 };
 
 export const broadcastToSession = (sessionId: number, message: any) => {
@@ -21,8 +25,11 @@ export const broadcastToSession = (sessionId: number, message: any) => {
   const data = JSON.stringify(message);
 
   room.forEach((ws) => {
-    if (ws.readyState === ws.OPEN) {
-      ws.send(data);
+    if (ws.readyState !== WebSocket.OPEN) {
+      room.delete(ws);
+      return;
     }
+
+    ws.send(data);
   });
 };

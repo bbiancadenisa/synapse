@@ -1,14 +1,16 @@
 import {
   Button,
   Dialog,
+  DialogActions,
   DialogContent,
   DialogTitle,
   MenuItem,
   Stack,
   TextField,
+  Typography,
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers';
-import { Dayjs } from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import { useEffect, useState } from 'react';
 import { updateTask } from '../../services/task';
 
@@ -37,6 +39,9 @@ export const EditTaskModal = ({ open, task, onClose, onUpdated }: Props) => {
   const [status, setStatus] = useState<'todo' | 'in_progress' | 'done'>('todo');
   const [deadline, setDeadline] = useState<Dayjs | null>(null);
 
+  const isFormValid =
+    title.trim().length > 0 && estimatedHours > 0 && !!deadline;
+
   useEffect(() => {
     if (!task) return;
 
@@ -45,17 +50,19 @@ export const EditTaskModal = ({ open, task, onClose, onUpdated }: Props) => {
     setEstimatedHours(task.estimated_hours);
     setPriority(task.priority);
     setStatus(task.status);
-    setDeadline(task.deadline ? (deadline as any) : null);
+    setDeadline(task.deadline ? dayjs(task.deadline) : null);
   }, [task]);
 
   const handleSave = async () => {
+    if (!isFormValid || !deadline) return;
+
     await updateTask(task.id, {
-      title,
+      title: title.trim(),
       description,
       estimated_hours: estimatedHours,
       priority,
       status,
-      deadline: deadline ? deadline.toISOString() : undefined,
+      deadline: deadline.toISOString(),
     });
 
     onUpdated();
@@ -63,16 +70,60 @@ export const EditTaskModal = ({ open, task, onClose, onUpdated }: Props) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Edit Task</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 24px 60px rgba(15, 23, 42, 0.16)',
+        },
+      }}
+    >
+      <DialogTitle sx={{ px: 3, pt: 3, pb: 1 }}>
+        <Typography
+          sx={{
+            fontSize: 22,
+            fontWeight: 600,
+            color: '#111827',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          Edit task
+        </Typography>
 
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
+        <Typography
+          sx={{
+            mt: 0.5,
+            fontSize: 14,
+            color: '#64748b',
+          }}
+        >
+          Update task details, priority, status, and deadline.
+        </Typography>
+      </DialogTitle>
+
+      <DialogContent sx={{ px: 3, pt: 2 }}>
+        <Stack spacing={2.25} sx={{ pt: 1 }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              color: '#64748b',
+            }}
+          >
+            Fields marked with <strong>*</strong> are required.
+          </Typography>
+
           <TextField
-            label="Title"
+            label="Title *"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             fullWidth
+            required
+            size="small"
           />
 
           <TextField
@@ -82,14 +133,18 @@ export const EditTaskModal = ({ open, task, onClose, onUpdated }: Props) => {
             fullWidth
             multiline
             rows={3}
+            size="small"
           />
 
           <TextField
-            label="Estimated hours"
+            label="Estimated hours *"
             type="number"
             value={estimatedHours}
             onChange={(e) => setEstimatedHours(Number(e.target.value))}
             fullWidth
+            required
+            size="small"
+            inputProps={{ min: 1 }}
           />
 
           <TextField
@@ -100,6 +155,7 @@ export const EditTaskModal = ({ open, task, onClose, onUpdated }: Props) => {
               setPriority(e.target.value as 'low' | 'medium' | 'high')
             }
             fullWidth
+            size="small"
           >
             <MenuItem value="low">Low</MenuItem>
             <MenuItem value="medium">Medium</MenuItem>
@@ -114,6 +170,7 @@ export const EditTaskModal = ({ open, task, onClose, onUpdated }: Props) => {
               setStatus(e.target.value as 'todo' | 'in_progress' | 'done')
             }
             fullWidth
+            size="small"
           >
             <MenuItem value="todo">To Do</MenuItem>
             <MenuItem value="in_progress">In Progress</MenuItem>
@@ -121,21 +178,59 @@ export const EditTaskModal = ({ open, task, onClose, onUpdated }: Props) => {
           </TextField>
 
           <DateTimePicker
-            label="Deadline"
+            label="Deadline *"
             value={deadline}
             onChange={(v) => setDeadline(v)}
             disablePast
             ampm={false}
             format="DD/MM/YYYY HH:mm"
             slots={{ textField: TextField }}
-            slotProps={{ textField: { fullWidth: true } }}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                required: true,
+                size: 'small',
+              },
+            }}
           />
-
-          <Button variant="contained" onClick={handleSave}>
-            Save changes
-          </Button>
         </Stack>
       </DialogContent>
+
+      <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
+        <Button
+          onClick={onClose}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            color: '#64748b',
+          }}
+        >
+          Cancel
+        </Button>
+
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={!isFormValid}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 500,
+            background: isFormValid ? '#4f46e5' : '#cbd5e1',
+            boxShadow: 'none',
+            '&:hover': {
+              background: isFormValid ? '#4338ca' : '#cbd5e1',
+              boxShadow: 'none',
+            },
+            '&.Mui-disabled': {
+              color: '#ffffff',
+              background: '#cbd5e1',
+            },
+          }}
+        >
+          Save changes
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

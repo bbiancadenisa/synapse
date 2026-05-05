@@ -1,14 +1,4 @@
-type SessionRuntimeState = {
-  sessionId: number;
-  startTime: number;
-  plannedDurationMs: number;
-  breakIntervalMs: number;
-  breakDurationMs: number;
-
-  breakCount: number;
-  isPaused: boolean;
-  timeoutId?: NodeJS.Timeout;
-};
+import { SessionRuntimeState } from './types';
 
 const sessions = new Map<number, SessionRuntimeState>();
 
@@ -17,6 +7,10 @@ export const addSession = (state: SessionRuntimeState) => {
 };
 
 export const getSession = (id: number) => sessions.get(id);
+
+export const updateSession = (id: number, state: SessionRuntimeState) => {
+  sessions.set(id, state);
+};
 
 export const removeSession = (id: number) => {
   sessions.delete(id);

@@ -1,4 +1,5 @@
 import { WebSocketServer } from 'ws';
+import { handleSessionAction } from '../engine/breakActions';
 import { joinSessionRoom, leaveSessionRoom } from './sessionRooms';
 
 export const wss = new WebSocketServer({ port: 3001 });
@@ -12,12 +13,23 @@ wss.on('connection', (ws) => {
     try {
       const data = JSON.parse(raw.toString());
 
-      if (data.type === 'JOIN_SESSION') {
-        joinSessionRoom(data.sessionId, ws);
-      }
+      switch (data.type) {
+        case 'JOIN_SESSION':
+          joinSessionRoom(data.sessionId, ws);
+          break;
 
-      if (data.type === 'LEAVE_SESSION') {
-        leaveSessionRoom(data.sessionId, ws);
+        case 'LEAVE_SESSION':
+          leaveSessionRoom(data.sessionId, ws);
+          break;
+
+        case 'BREAK_ACCEPTED':
+        case 'BREAK_IGNORED':
+        case 'TAKE_MANUAL_BREAK':
+          void handleSessionAction(data);
+          break;
+
+        default:
+          break;
       }
     } catch (err) {
       console.error('Invalid WS message', err);

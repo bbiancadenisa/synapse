@@ -1,8 +1,3 @@
 .container {
-  padding-top: 10px;
-}
-
-.container input,
-.container textarea {
-  border-radius: 10px;
+  padding-top: 8px;
 }

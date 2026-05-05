@@ -1,4 +1,4 @@
-import { DeleteOutline, VisibilityOutlined } from '@mui/icons-material';
+import { DeleteOutline } from '@mui/icons-material';
 import { Card, Chip, IconButton, Stack, Typography } from '@mui/material';
 import styles from './SubjectCard.module.css';
 
@@ -16,50 +16,56 @@ type Props = {
   onDelete: () => void;
 };
 
-const truncate = (text?: string, max = 150) =>
-  text ? (text.length > max ? text.slice(0, max) + '...' : text) : '';
+const truncate = (text?: string, max = 130) =>
+  text
+    ? text.length > max
+      ? text.slice(0, max) + '...'
+      : text
+    : 'No description yet.';
 
-const getColor = (difficulty: string) => {
-  if (difficulty === 'high') return 'error';
-  if (difficulty === 'medium') return 'warning';
-  return 'success';
+const getDifficultyClass = (difficulty: Subject['difficulty']) => {
+  if (difficulty === 'high') return styles.high;
+  if (difficulty === 'medium') return styles.medium;
+  return styles.low;
 };
 
 export const SubjectCard = ({ subject, onView, onDelete }: Props) => {
+  const handleDelete = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    onDelete();
+  };
+
   return (
-    <Card className={styles.card}>
+    <Card className={styles.card} onClick={onView}>
       <div
-        style={{
-          height: 40,
-          background: subject.color || '#6C63FF',
-          borderTopLeftRadius: 12,
-          borderTopRightRadius: 12,
-        }}
+        className={styles.accent}
+        style={{ background: subject.color || '#4f46e5' }}
       />
 
       <div className={styles.content}>
-        <Typography className={styles.title}>{subject.name}</Typography>
+        <Stack spacing={1}>
+          <Typography className={styles.title}>{subject.name}</Typography>
 
-        <Typography className={styles.description}>
-          {truncate(subject.description)}
-        </Typography>
+          <Typography className={styles.description}>
+            {truncate(subject.description)}
+          </Typography>
+        </Stack>
 
         <div className={styles.footer}>
           <Chip
             label={subject.difficulty}
             size="small"
-            color={getColor(subject.difficulty) as any}
+            className={`${styles.chip} ${getDifficultyClass(subject.difficulty)}`}
           />
 
-          <Stack direction="row" spacing={1}>
-            <IconButton size="small" onClick={onView}>
-              <VisibilityOutlined fontSize="small" />
-            </IconButton>
-
-            <IconButton size="small" onClick={onDelete}>
-              <DeleteOutline fontSize="small" />
-            </IconButton>
-          </Stack>
+          <IconButton
+            size="small"
+            onClick={handleDelete}
+            className={styles.deleteButton}
+            aria-label="Delete subject"
+          >
+            <DeleteOutline fontSize="small" />
+          </IconButton>
         </div>
       </div>
     </Card>

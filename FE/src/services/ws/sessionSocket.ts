@@ -15,16 +15,7 @@ export const connectSessionSocket = (
   if (isConnecting) return;
 
   if (socket) {
-    socket.onopen = null;
-    socket.onmessage = null;
-    socket.onerror = null;
-    socket.onclose = null;
-
-    try {
-      socket.close();
-    } catch {}
-
-    socket = null;
+    disconnectSessionSocket();
   }
 
   isConnecting = true;
@@ -47,9 +38,7 @@ export const connectSessionSocket = (
   socket.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-
       console.log('WS EVENT:', data);
-
       onEventCallback?.(data);
     } catch (err) {
       console.error('Invalid WS message', err);
@@ -67,11 +56,24 @@ export const connectSessionSocket = (
   };
 };
 
+export const sendSessionAction = (type: string) => {
+  if (!socket || socket.readyState !== WebSocket.OPEN || !currentSessionId) {
+    return;
+  }
+
+  socket.send(
+    JSON.stringify({
+      type,
+      sessionId: currentSessionId,
+    }),
+  );
+};
+
 export const disconnectSessionSocket = () => {
   if (!socket) return;
 
   try {
-    if (socket.readyState === WebSocket.OPEN) {
+    if (socket.readyState === WebSocket.OPEN && currentSessionId) {
       socket.send(
         JSON.stringify({
           type: 'LEAVE_SESSION',

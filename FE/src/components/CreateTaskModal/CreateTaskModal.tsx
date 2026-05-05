@@ -1,11 +1,13 @@
 import {
   Button,
   Dialog,
+  DialogActions,
   DialogContent,
   DialogTitle,
   MenuItem,
   Stack,
   TextField,
+  Typography,
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers';
 import { Dayjs } from 'dayjs';
@@ -31,40 +33,95 @@ export const CreateTaskModal = ({
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('low');
   const [deadline, setDeadline] = useState<Dayjs | null>(null);
 
+  const isFormValid =
+    title.trim().length > 0 && !!deadline && estimatedHours > 0;
+
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setEstimatedHours(1);
+    setPriority('low');
+    setDeadline(null);
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   const handleSubmit = async () => {
-    if (!title.trim()) return;
-    if (!deadline) return;
+    if (!isFormValid || !deadline) return;
 
     await createTask({
       subject_id: subjectId,
-      title,
+      title: title.trim(),
       description,
       estimated_hours: estimatedHours,
       priority,
       deadline: deadline.toISOString(),
     });
 
-    setTitle('');
-    setDescription('');
-    setEstimatedHours(1);
-    setPriority('low');
-    setDeadline(null);
+    resetForm();
 
     onCreated();
     onClose();
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Create Task</DialogTitle>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      fullWidth
+      maxWidth="sm"
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 24px 60px rgba(15, 23, 42, 0.16)',
+        },
+      }}
+    >
+      <DialogTitle sx={{ px: 3, pt: 3, pb: 1 }}>
+        <Typography
+          sx={{
+            fontSize: 22,
+            fontWeight: 600,
+            color: '#111827',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          Create task
+        </Typography>
 
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
+        <Typography
+          sx={{
+            mt: 0.5,
+            fontSize: 14,
+            color: '#64748b',
+          }}
+        >
+          Add a task with priority, estimated time, and a deadline.
+        </Typography>
+      </DialogTitle>
+
+      <DialogContent sx={{ px: 3, pt: 2 }}>
+        <Stack spacing={2.25} sx={{ pt: 1 }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              color: '#64748b',
+            }}
+          >
+            Fields marked with <strong>*</strong> are required.
+          </Typography>
+
           <TextField
             label="Title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             fullWidth
+            required
+            size="small"
           />
 
           <TextField
@@ -74,6 +131,7 @@ export const CreateTaskModal = ({
             fullWidth
             multiline
             rows={3}
+            size="small"
           />
 
           <TextField
@@ -82,6 +140,9 @@ export const CreateTaskModal = ({
             value={estimatedHours}
             onChange={(e) => setEstimatedHours(Number(e.target.value))}
             fullWidth
+            required
+            size="small"
+            inputProps={{ min: 1 }}
           />
 
           <TextField
@@ -92,6 +153,7 @@ export const CreateTaskModal = ({
               setPriority(e.target.value as 'low' | 'medium' | 'high')
             }
             fullWidth
+            size="small"
           >
             <MenuItem value="low">Low</MenuItem>
             <MenuItem value="medium">Medium</MenuItem>
@@ -106,14 +168,52 @@ export const CreateTaskModal = ({
             ampm={false}
             format="DD/MM/YYYY HH:mm"
             slots={{ textField: TextField }}
-            slotProps={{ textField: { fullWidth: true } }}
+            slotProps={{
+              textField: {
+                fullWidth: true,
+                required: true,
+                size: 'small',
+              },
+            }}
           />
-
-          <Button variant="contained" onClick={handleSubmit}>
-            Create Task
-          </Button>
         </Stack>
       </DialogContent>
+
+      <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
+        <Button
+          onClick={handleClose}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            color: '#64748b',
+          }}
+        >
+          Cancel
+        </Button>
+
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={!isFormValid}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 500,
+            background: isFormValid ? '#4f46e5' : '#cbd5e1',
+            boxShadow: 'none',
+            '&:hover': {
+              background: isFormValid ? '#4338ca' : '#cbd5e1',
+              boxShadow: 'none',
+            },
+            '&.Mui-disabled': {
+              color: '#ffffff',
+              background: '#cbd5e1',
+            },
+          }}
+        >
+          Create task
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };

@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
 import { pool } from '../config/db';
-import { startSessionEngine } from '../engine/sessionEngine';
+import {
+  endSessionByUser,
+  startSessionEngine,
+  timeoutSession,
+} from '../engine/sessionEngine';
+import * as sessionService from '../services/sessionService';
 
 export const startStudySession = async (req: Request, res: Response) => {
-  const client = await pool.connect();
-
   try {
-    await client.query('BEGIN');
-
     const {
       taskId,
       plannedDurationMinutes,
@@ -15,41 +16,29 @@ export const startStudySession = async (req: Request, res: Response) => {
       breakDurationMinutes,
     } = req.body;
 
-    // 1. CREATE SESSION
-    const sessionResult = await client.query(
-      `
-      INSERT INTO study_sessions (
-        user_id,
-        task_id,
-        status,
-        start_time,
-        planned_duration_minutes,
-        created_at,
-        updated_at
-      )
-      VALUES ($1, $2, 'running', NOW(), $3, NOW(), NOW())
-      RETURNING *
-      `,
-      [1, taskId, plannedDurationMinutes],
-    );
+    if (
+      !taskId ||
+      !plannedDurationMinutes ||
+      !breakIntervalMinutes ||
+      !breakDurationMinutes
+    ) {
+      return res.status(400).json({ error: 'Missing session configuration' });
+    }
+
+    const sessionResult = await sessionService.createSession({
+      userId: 1,
+      taskId,
+      plannedDurationMinutes,
+    });
 
     const session = sessionResult.rows[0];
 
-    // 2. CREATE SETTINGS
-    await client.query(
-      `
-      INSERT INTO study_session_settings (
-        session_id,
-        break_interval_minutes,
-        break_duration_minutes,
-        created_at
-      )
-      VALUES ($1, $2, $3, NOW())
-      `,
-      [session.id, breakIntervalMinutes, breakDurationMinutes],
-    );
+    await sessionService.createSessionSettings({
+      sessionId: session.id,
+      breakIntervalMinutes,
+      breakDurationMinutes,
+    });
 
-    await client.query('COMMIT');
     startSessionEngine({
       sessionId: session.id,
       plannedDurationMinutes,
@@ -59,11 +48,8 @@ export const startStudySession = async (req: Request, res: Response) => {
 
     return res.status(201).json(session);
   } catch (err) {
-    await client.query('ROLLBACK');
     console.error(err);
     return res.status(500).json({ error: 'Failed to start session' });
-  } finally {
-    client.release();
   }
 };
 
@@ -71,14 +57,7 @@ export const getStudySessionById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `
-      SELECT * 
-      FROM study_sessions
-      WHERE id = $1 AND user_id = $2
-      `,
-      [id, 1],
-    );
+    const result = await sessionService.getSessionById(Number(id), 1);
 
     return res.json(result.rows[0] || null);
   } catch (err) {
@@ -98,18 +77,9 @@ export const updateStudySession = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    const result = await pool.query(
-      `
-      UPDATE study_sessions
-      SET status = $1,
-          updated_at = NOW()
-      WHERE id = $2 AND user_id = $3
-      RETURNING *
-      `,
-      [status, id, 1],
-    );
+    const result = await sessionService.updateSessionStatus(Number(id), status);
 
-    return res.json(result.rows[0]);
+    return res.json(result.rows[0] || null);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to update session' });
@@ -120,40 +90,11 @@ export const endStudySession = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const session = await pool.query(
-      `SELECT * FROM study_sessions WHERE id = $1 AND user_id = $2`,
-      [id, 1],
-    );
+    await endSessionByUser(Number(id));
 
-    if (!session.rows[0]) {
-      return res.status(404).json({ error: 'Session not found' });
-    }
+    const result = await sessionService.getSessionById(Number(id), 1);
 
-    if (session.rows[0].status === 'completed') {
-      return res.status(400).json({ error: 'Session already completed' });
-    }
-
-    const result = await pool.query(
-      `
-      UPDATE study_sessions
-      SET status = 'completed',
-          end_time = NOW(),
-          updated_at = NOW()
-      WHERE id = $1 AND user_id = $2
-      RETURNING *
-      `,
-      [id, 1],
-    );
-
-    await pool.query(
-      `
-      INSERT INTO session_events (session_id, type, created_at)
-      VALUES ($1, 'STOP_ACCEPTED', NOW())
-      `,
-      [id],
-    );
-
-    return res.json(result.rows[0]);
+    return res.json(result.rows[0] || null);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to end session' });
@@ -164,19 +105,11 @@ export const timeoutStudySession = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `
-      UPDATE study_sessions
-      SET status = 'timed_out',
-          end_time = NOW(),
-          updated_at = NOW()
-      WHERE id = $1 AND status = 'running'
-      RETURNING *
-      `,
-      [id],
-    );
+    await timeoutSession(Number(id));
 
-    return res.json(result.rows[0]);
+    const result = await sessionService.getSessionById(Number(id), 1);
+
+    return res.json(result.rows[0] || null);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to timeout session' });
@@ -189,34 +122,25 @@ export const createSessionEvent = async (req: Request, res: Response) => {
     const { type } = req.body;
 
     const allowedTypes = [
+      'SESSION_STARTED',
+      'SESSION_TIME_REACHED',
+      'SESSION_ENDED',
+      'SESSION_TIMEOUT',
       'BREAK_REMINDER',
       'BREAK_ACCEPTED',
       'BREAK_IGNORED',
       'BREAK_STARTED',
       'BREAK_ENDED',
-      'STOP_REMINDER',
       'STOP_ACCEPTED',
       'STOP_IGNORED',
       'PENALTY_TRIGGERED',
-      'TIMEOUT',
     ];
 
     if (!allowedTypes.includes(type)) {
       return res.status(400).json({ error: 'Invalid event type' });
     }
 
-    const event = await pool.query(
-      `
-      INSERT INTO session_events (
-        session_id,
-        type,
-        created_at
-      )
-      VALUES ($1, $2, NOW())
-      RETURNING *
-      `,
-      [id, type],
-    );
+    const event = await sessionService.insertEvent(Number(id), type);
 
     return res.status(201).json(event.rows[0]);
   } catch (err) {
@@ -229,19 +153,44 @@ export const getSessionEvents = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const result = await pool.query(
-      `
-      SELECT *
-      FROM session_events
-      WHERE session_id = $1
-      ORDER BY created_at ASC
-      `,
-      [id],
-    );
+    const result = await sessionService.getSessionEvents(Number(id));
 
     return res.json(result.rows);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Failed to fetch events' });
+  }
+};
+
+export const getStudySessionsByTaskId = async (req: Request, res: Response) => {
+  try {
+    const { taskId } = req.params;
+
+    const result = await pool.query(
+      `
+      SELECT
+        ss.id,
+        ss.task_id,
+        ss.status,
+        ss.start_time,
+        ss.end_time,
+        ss.planned_duration_minutes,
+        ss.created_at,
+        COALESCE(COUNT(ssb.id), 0)::int AS break_count
+      FROM study_sessions ss
+      LEFT JOIN study_session_breaks ssb
+        ON ssb.session_id = ss.id
+        AND ssb.status = 'ended'
+      WHERE ss.task_id = $1
+      GROUP BY ss.id
+      ORDER BY ss.created_at DESC
+      `,
+      [Number(taskId)],
+    );
+
+    return res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Failed to fetch task sessions' });
   }
 };

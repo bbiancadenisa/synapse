@@ -1,14 +1,14 @@
 export const SUBJECT_COLORS = [
-  '#A5B4FC',
-  '#93C5FD',
-  '#6EE7B7',
-  '#FCA5A5',
-  '#FCD34D',
-  '#FDBA74',
-  '#C4B5FD',
-  '#F9A8D4',
-  '#67E8F9',
-  '#86EFAC',
-  '#E9D5FF',
-  '#DDD6FE',
+  '#4F46E5', // indigo
+  '#2563EB', // blue
+  '#0891B2', // cyan
+  '#059669', // green
+  '#65A30D', // lime
+  '#CA8A04', // yellow
+  '#EA580C', // orange
+  '#DC2626', // red
+  '#DB2777', // pink
+  '#7C3AED', // violet
+  '#9333EA', // purple
+  '#475569', // slate (neutral)
 ];
