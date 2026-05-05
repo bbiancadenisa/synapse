@@ -3,14 +3,21 @@ import { pool } from '../config/db';
 
 // CREATE TASK
 export const createTask = async (req: Request, res: Response) => {
-  const { subject_id, title, estimated_hours, deadline } = req.body;
+  const { subject_id, title, estimated_hours, priority, deadline } = req.body;
+
+  if (!subject_id || !title || estimated_hours == null || !priority) {
+    return res.status(400).json({
+      error: 'subject_id, title, estimated_hours and priority are required',
+    });
+  }
 
   try {
     const result = await pool.query(
-      `INSERT INTO tasks (subject_id, title, estimated_hours, deadline)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO tasks 
+        (subject_id, title, estimated_hours, priority, deadline, status, actual_hours_spent)
+       VALUES ($1, $2, $3, $4, $5, 'todo', 0)
        RETURNING *`,
-      [subject_id, title, estimated_hours, deadline],
+      [subject_id, title, estimated_hours, priority, deadline || null],
     );
 
     res.status(201).json(result.rows[0]);
@@ -23,13 +30,40 @@ export const createTask = async (req: Request, res: Response) => {
 // GET TASKS BY SUBJECT
 export const getTasksBySubject = async (req: Request, res: Response) => {
   const { subjectId } = req.params;
+  const { sort = 'created_desc', status } = req.query;
+
+  let orderBy = 'created_at DESC';
+
+  switch (sort) {
+    case 'created_asc':
+      orderBy = 'created_at ASC';
+      break;
+    case 'deadline_asc':
+      orderBy = 'deadline ASC NULLS LAST';
+      break;
+    case 'deadline_desc':
+      orderBy = 'deadline DESC NULLS LAST';
+      break;
+    case 'priority_asc':
+      orderBy = 'priority ASC';
+      break;
+    case 'priority_desc':
+      orderBy = 'priority DESC';
+      break;
+  }
+
+  let query = `SELECT * FROM tasks WHERE subject_id = $1`;
+  const values: any[] = [subjectId];
+
+  if (status) {
+    query += ` AND status = $2`;
+    values.push(status);
+  }
+
+  query += ` ORDER BY ${orderBy}`;
 
   try {
-    const result = await pool.query(
-      `SELECT * FROM tasks WHERE subject_id = $1 ORDER BY created_at DESC`,
-      [subjectId],
-    );
-
+    const result = await pool.query(query, values);
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -37,28 +71,61 @@ export const getTasksBySubject = async (req: Request, res: Response) => {
   }
 };
 
-export const updateTask = async (req: Request, res: Response) => {
+export const getTaskById = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { title, description, estimated_hours, deadline, status } = req.body;
-
-  const warning = estimated_hours
-    ? 'Changing estimated time affects progress analytics'
-    : null;
 
   try {
+    const result = await pool.query(`SELECT * FROM tasks WHERE id = $1`, [id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error fetching task' });
+  }
+};
+
+export const updateTask = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { title, description, estimated_hours, deadline, status, priority } =
+    req.body;
+
+  try {
+    const existing = await pool.query(`SELECT * FROM tasks WHERE id = $1`, [
+      id,
+    ]);
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    const task = existing.rows[0];
+
     const result = await pool.query(
       `UPDATE tasks
-       SET title=$1,
-           description=$2,
-           estimated_hours=$3,
-           deadline=$4,
-           status=$5
-       WHERE id=$6
+       SET title = $1,
+           description = $2,
+           estimated_hours = $3,
+           deadline = $4,
+           status = $5,
+           priority = $6
+       WHERE id = $7
        RETURNING *`,
-      [title, description, estimated_hours, deadline, status, id],
+      [
+        title ?? task.title,
+        description ?? task.description,
+        estimated_hours ?? task.estimated_hours,
+        deadline ?? task.deadline,
+        status ?? task.status,
+        priority ?? task.priority,
+        id,
+      ],
     );
 
-    res.json({ data: result.rows[0], warning });
+    res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error updating task' });
@@ -69,16 +136,20 @@ export const deleteTask = async (req: Request, res: Response) => {
   const { id } = req.params;
 
   try {
-    const sessions = await pool.query(
-      `SELECT * FROM study_sessions WHERE task_id = $1`,
+    const activeSession = await pool.query(
+      `SELECT 1 FROM study_sessions 
+       WHERE task_id = $1 AND end_time IS NULL 
+       LIMIT 1`,
       [id],
     );
 
-    if (sessions.rows.length > 0) {
+    if (activeSession.rows.length > 0) {
       return res.status(400).json({
-        error: 'Cannot delete task with study sessions',
+        error: 'Cannot delete task with active study session',
       });
     }
+
+    await pool.query(`DELETE FROM study_sessions WHERE task_id = $1`, [id]);
 
     await pool.query(`DELETE FROM tasks WHERE id = $1`, [id]);
 
@@ -86,21 +157,5 @@ export const deleteTask = async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error deleting task' });
-  }
-};
-
-export const markTaskDone = async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  try {
-    const result = await pool.query(
-      `UPDATE tasks SET status = 'done' WHERE id = $1 RETURNING *`,
-      [id],
-    );
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Error marking task done' });
   }
 };

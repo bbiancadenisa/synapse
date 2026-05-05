@@ -2,8 +2,8 @@ import express from 'express';
 import {
   createTask,
   deleteTask,
+  getTaskById,
   getTasksBySubject,
-  markTaskDone,
   updateTask,
 } from '../controllers/task';
 
@@ -13,6 +13,6 @@ router.post('/', createTask);
 router.get('/:subjectId', getTasksBySubject);
 router.put('/:id', updateTask);
 router.delete('/:id', deleteTask);
-router.patch('/:id/done', markTaskDone);
+router.get('/task/:id', getTaskById);
 
 export default router;
