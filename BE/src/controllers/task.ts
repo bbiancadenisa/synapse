@@ -1,115 +1,111 @@
 import { Request, Response } from 'express';
-import { pool } from '../config/db';
+import * as taskService from '../services/taskService';
+import {
+  isValidTaskPriority,
+  isValidTaskStatus,
+  parseEstimatedHours,
+  validateFutureDate,
+} from '../validators/taskValidator';
 
-// CREATE TASK
 export const createTask = async (req: Request, res: Response) => {
-  const { subject_id, title, estimated_hours, priority, deadline } = req.body;
-
-  if (!subject_id || !title || estimated_hours == null || !priority) {
-    return res.status(400).json({
-      error: 'subject_id, title, estimated_hours and priority are required',
-    });
-  }
-
   try {
-    const result = await pool.query(
-      `INSERT INTO tasks 
-        (subject_id, title, estimated_hours, priority, deadline, status, actual_hours_spent)
-       VALUES ($1, $2, $3, $4, $5, 'todo', 0)
-       RETURNING *`,
-      [subject_id, title, estimated_hours, priority, deadline || null],
-    );
+    const {
+      subject_id,
+      title,
+      description,
+      estimated_hours,
+      priority,
+      deadline,
+    } = req.body;
 
-    res.status(201).json(result.rows[0]);
+    const parsedEstimatedHours = parseEstimatedHours(estimated_hours);
+
+    if (!subject_id || !title || parsedEstimatedHours === null || !priority) {
+      return res.status(400).json({
+        error: 'subject_id, title, estimated_hours and priority are required',
+      });
+    }
+
+    if (!isValidTaskPriority(priority)) {
+      return res.status(400).json({
+        error: 'Invalid priority. Use low | medium | high',
+      });
+    }
+
+    if (deadline) {
+      const deadlineValidation = validateFutureDate(deadline);
+
+      if (!deadlineValidation.valid) {
+        return res.status(400).json({
+          error: deadlineValidation.error,
+        });
+      }
+    }
+
+    const result = await taskService.createTask({
+      subjectId: Number(subject_id),
+      title,
+      description,
+      estimatedHours: parsedEstimatedHours,
+      priority,
+      deadline,
+    });
+
+    return res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error creating task' });
+    return res.status(500).json({ error: 'Error creating task' });
   }
 };
 
-// GET TASKS BY SUBJECT
-// GET TASKS BY SUBJECT
 export const getTasksBySubject = async (req: Request, res: Response) => {
-  const { subjectId } = req.params;
-  const { sort = 'created_desc', status } = req.query;
-
-  let orderBy = 't.created_at DESC';
-
-  switch (sort) {
-    case 'created_asc':
-      orderBy = 't.created_at ASC';
-      break;
-    case 'deadline_asc':
-      orderBy = 't.deadline ASC NULLS LAST';
-      break;
-    case 'deadline_desc':
-      orderBy = 't.deadline DESC NULLS LAST';
-      break;
-    case 'priority_asc':
-      orderBy = 't.priority ASC';
-      break;
-    case 'priority_desc':
-      orderBy = 't.priority DESC';
-      break;
-  }
-
-  const values: any[] = [subjectId];
-
-  let query = `
-    SELECT
-      t.*,
-      COALESCE(SUM(ss.study_time_ms), 0)::int AS total_study_ms
-    FROM tasks t
-    LEFT JOIN study_sessions ss
-      ON ss.task_id = t.id
-    WHERE t.subject_id = $1
-  `;
-
-  if (status) {
-    query += ` AND t.status = $2`;
-    values.push(status);
-  }
-
-  query += `
-    GROUP BY t.id
-    ORDER BY ${orderBy}
-  `;
-
   try {
-    const result = await pool.query(query, values);
-    res.json(result.rows);
+    const { subjectId } = req.params;
+    const { sort = 'created_desc', status } = req.query;
+
+    if (status && !isValidTaskStatus(status)) {
+      return res.status(400).json({
+        error: 'Invalid status. Use todo | in_progress | done',
+      });
+    }
+
+    const result = await taskService.getTasksBySubject({
+      subjectId: Number(subjectId),
+      sort: sort as string,
+      status: status as string | undefined,
+    });
+
+    return res.json(result.rows);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error fetching tasks' });
+    return res.status(500).json({ error: 'Error fetching tasks' });
   }
 };
 
 export const getTaskById = async (req: Request, res: Response) => {
-  const { id } = req.params;
-
   try {
-    const result = await pool.query(`SELECT * FROM tasks WHERE id = $1`, [id]);
+    const { id } = req.params;
+
+    const result = await taskService.getTaskById(Number(id));
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    res.json(result.rows[0]);
+    return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error fetching task' });
+    return res.status(500).json({ error: 'Error fetching task' });
   }
 };
 
 export const updateTask = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const { title, description, estimated_hours, deadline, status, priority } =
-    req.body;
-
   try {
-    const existing = await pool.query(`SELECT * FROM tasks WHERE id = $1`, [
-      id,
-    ]);
+    const { id } = req.params;
+    const { title, description, estimated_hours, deadline, status, priority } =
+      req.body;
+
+    const existing = await taskService.getTaskById(Number(id));
 
     if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Task not found' });
@@ -117,44 +113,72 @@ export const updateTask = async (req: Request, res: Response) => {
 
     const task = existing.rows[0];
 
-    const result = await pool.query(
-      `UPDATE tasks
-       SET title = $1,
-           description = $2,
-           estimated_hours = $3,
-           deadline = $4,
-           status = $5,
-           priority = $6
-       WHERE id = $7
-       RETURNING *`,
-      [
-        title ?? task.title,
-        description ?? task.description,
-        estimated_hours ?? task.estimated_hours,
-        deadline ?? task.deadline,
-        status ?? task.status,
-        priority ?? task.priority,
-        id,
-      ],
-    );
+    let parsedEstimatedHours = task.estimated_hours;
 
-    res.json(result.rows[0]);
+    if (estimated_hours !== undefined) {
+      const parsed = parseEstimatedHours(estimated_hours);
+
+      if (parsed === null) {
+        return res.status(400).json({
+          error: 'Invalid estimated_hours',
+        });
+      }
+
+      parsedEstimatedHours = parsed;
+    }
+
+    if (priority !== undefined && !isValidTaskPriority(priority)) {
+      return res.status(400).json({
+        error: 'Invalid priority. Use low | medium | high',
+      });
+    }
+
+    if (status !== undefined && !isValidTaskStatus(status)) {
+      return res.status(400).json({
+        error: 'Invalid status. Use todo | in_progress | done',
+      });
+    }
+
+    if (deadline !== undefined && deadline !== null) {
+      const deadlineValidation = validateFutureDate(deadline);
+
+      if (!deadlineValidation.valid) {
+        return res.status(400).json({
+          error: deadlineValidation.error,
+        });
+      }
+    }
+
+    const result = await taskService.updateTask(Number(id), {
+      title: title ?? task.title,
+      description: description ?? task.description,
+      estimatedHours: parsedEstimatedHours,
+      deadline: deadline ?? task.deadline,
+      status: status ?? task.status,
+      priority: priority ?? task.priority,
+    });
+
+    return res.json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error updating task' });
+    return res.status(500).json({ error: 'Error updating task' });
   }
 };
 
 export const deleteTask = async (req: Request, res: Response) => {
-  const { id } = req.params;
-
   try {
-    const activeSession = await pool.query(
-      `SELECT 1 FROM study_sessions 
-       WHERE task_id = $1 AND end_time IS NULL 
-       LIMIT 1`,
-      [id],
-    );
+    const { id } = req.params;
+    const taskId = Number(id);
+
+    const existing = await taskService.getTaskById(taskId);
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Task not found',
+      });
+    }
+
+    const activeSession = await taskService.getActiveSessionForTask(taskId);
 
     if (activeSession.rows.length > 0) {
       return res.status(400).json({
@@ -162,13 +186,20 @@ export const deleteTask = async (req: Request, res: Response) => {
       });
     }
 
-    await pool.query(`DELETE FROM study_sessions WHERE task_id = $1`, [id]);
+    const existingSessions = await taskService.getStudySessionsForTask(taskId);
 
-    await pool.query(`DELETE FROM tasks WHERE id = $1`, [id]);
+    if (existingSessions.rows.length > 0) {
+      return res.status(400).json({
+        error:
+          'Cannot delete task with existing study sessions. Archive instead.',
+      });
+    }
 
-    res.json({ message: 'Task deleted' });
+    await taskService.deleteTaskById(taskId);
+
+    return res.json({ message: 'Task deleted' });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error deleting task' });
+    return res.status(500).json({ error: 'Error deleting task' });
   }
 };
