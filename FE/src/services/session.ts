@@ -9,6 +9,7 @@ export type StudySession = {
   planned_duration_minutes: number;
   created_at: string;
   break_count: number;
+  study_time_ms: number;
 };
 
 export const startStudySession = async (data: {

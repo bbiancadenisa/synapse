@@ -30,6 +30,18 @@ type Props = {
   onDeleted?: () => void;
   onEdit: () => void;
   onCreateSession: () => void;
+  total_study_ms?: number;
+};
+
+const getTaskProgress = (task: {
+  estimated_hours: number;
+  total_study_ms?: number;
+}) => {
+  const estimatedMs = task.estimated_hours * 60 * 60 * 1000;
+
+  if (!estimatedMs) return 0;
+
+  return Math.round(((task.total_study_ms ?? 0) / estimatedMs) * 100);
 };
 
 const getStatusStyle = (status: string) => {
@@ -69,10 +81,11 @@ const formatSessionStatus = (status: string) => {
 };
 
 const getSessionProgress = (session: StudySession) => {
-  if (session.status === 'completed') return 100;
-  if (session.status === 'timed_out') return 100;
+  const plannedMs = session.planned_duration_minutes * 60 * 1000;
 
-  return 0;
+  if (!plannedMs) return 0;
+
+  return Math.round((session.study_time_ms / plannedMs) * 100);
 };
 
 const formatDate = (date: string) => {
@@ -107,6 +120,8 @@ export const TaskCard = ({
       setLoadingSessions(false);
     }
   };
+
+  const taskProgress = getTaskProgress(task);
 
   return (
     <Accordion
@@ -180,6 +195,38 @@ export const TaskCard = ({
                 {task.estimated_hours}h estimated
               </Typography>
             </Stack>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              alignItems="center"
+              sx={{ mt: 1.25 }}
+            >
+              <LinearProgress
+                variant="determinate"
+                value={Math.min(taskProgress, 100)}
+                sx={{
+                  flex: 1,
+                  height: 7,
+                  borderRadius: 999,
+                  background: '#e5e7eb',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 999,
+                    background: taskProgress >= 100 ? '#10b981' : '#4f46e5',
+                  },
+                }}
+              />
+
+              <Typography
+                sx={{
+                  width: 42,
+                  textAlign: 'right',
+                  fontSize: 12,
+                  color: '#64748b',
+                }}
+              >
+                {taskProgress}%
+              </Typography>
+            </Stack>
           </Box>
 
           <Stack direction="row" spacing={0.5}>
@@ -242,19 +289,21 @@ export const TaskCard = ({
         <Button
           variant="contained"
           onClick={onCreateSession}
+          disabled={task.status === 'done'}
           sx={{
             borderRadius: 2,
             textTransform: 'none',
             fontWeight: 500,
-            background: '#4f46e5',
             boxShadow: 'none',
+            background: task.status === 'done' ? '#cbd5e1' : '#4f46e5',
+
             '&:hover': {
-              background: '#4338ca',
+              background: task.status === 'done' ? '#cbd5e1' : '#4338ca',
               boxShadow: 'none',
             },
           }}
         >
-          Create session
+          {task.status === 'done' ? 'Task completed' : 'Create Session'}
         </Button>
 
         <Box sx={{ mt: 3 }}>
@@ -361,7 +410,7 @@ export const TaskCard = ({
                     <Stack direction="row" spacing={1.5} alignItems="center">
                       <LinearProgress
                         variant="determinate"
-                        value={progress}
+                        value={Math.min(progress, 100)}
                         sx={{
                           flex: 1,
                           height: 8,

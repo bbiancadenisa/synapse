@@ -28,39 +28,52 @@ export const createTask = async (req: Request, res: Response) => {
 };
 
 // GET TASKS BY SUBJECT
+// GET TASKS BY SUBJECT
 export const getTasksBySubject = async (req: Request, res: Response) => {
   const { subjectId } = req.params;
   const { sort = 'created_desc', status } = req.query;
 
-  let orderBy = 'created_at DESC';
+  let orderBy = 't.created_at DESC';
 
   switch (sort) {
     case 'created_asc':
-      orderBy = 'created_at ASC';
+      orderBy = 't.created_at ASC';
       break;
     case 'deadline_asc':
-      orderBy = 'deadline ASC NULLS LAST';
+      orderBy = 't.deadline ASC NULLS LAST';
       break;
     case 'deadline_desc':
-      orderBy = 'deadline DESC NULLS LAST';
+      orderBy = 't.deadline DESC NULLS LAST';
       break;
     case 'priority_asc':
-      orderBy = 'priority ASC';
+      orderBy = 't.priority ASC';
       break;
     case 'priority_desc':
-      orderBy = 'priority DESC';
+      orderBy = 't.priority DESC';
       break;
   }
 
-  let query = `SELECT * FROM tasks WHERE subject_id = $1`;
   const values: any[] = [subjectId];
 
+  let query = `
+    SELECT
+      t.*,
+      COALESCE(SUM(ss.study_time_ms), 0)::int AS total_study_ms
+    FROM tasks t
+    LEFT JOIN study_sessions ss
+      ON ss.task_id = t.id
+    WHERE t.subject_id = $1
+  `;
+
   if (status) {
-    query += ` AND status = $2`;
+    query += ` AND t.status = $2`;
     values.push(status);
   }
 
-  query += ` ORDER BY ${orderBy}`;
+  query += `
+    GROUP BY t.id
+    ORDER BY ${orderBy}
+  `;
 
   try {
     const result = await pool.query(query, values);

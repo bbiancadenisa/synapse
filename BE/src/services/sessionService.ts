@@ -67,17 +67,22 @@ export const updateSessionStatus = async (id: number, status: string) => {
   );
 };
 
-export const endSession = async (id: number, status: string) => {
+export const endSession = async (
+  id: number,
+  status: string,
+  studyTimeMs = 0,
+) => {
   return pool.query(
     `
     UPDATE study_sessions
     SET status = $2,
+        study_time_ms = $3,
         end_time = NOW(),
         updated_at = NOW()
     WHERE id = $1
     RETURNING *
     `,
-    [id, status],
+    [id, status, studyTimeMs],
   );
 };
 
@@ -101,5 +106,19 @@ export const getSessionEvents = async (sessionId: number) => {
     ORDER BY created_at ASC
     `,
     [sessionId],
+  );
+};
+
+export const markTaskAsInProgress = async (taskId: number) => {
+  return pool.query(
+    `
+    UPDATE tasks
+    SET status = 'in_progress',
+        updated_at = NOW()
+    WHERE id = $1
+      AND status = 'todo'
+    RETURNING *
+    `,
+    [taskId],
   );
 };

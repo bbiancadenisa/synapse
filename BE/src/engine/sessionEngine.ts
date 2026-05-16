@@ -1,3 +1,4 @@
+import * as dailyStatsService from '../services/dailyStatsService';
 import * as sessionBreakService from '../services/sessionBreakService';
 import * as sessionService from '../services/sessionService';
 import { emitSessionEvent } from '../ws/sessionGateway';
@@ -13,10 +14,12 @@ const TICK_MS = 1000;
 const IGNORE_COOLDOWN_MS = 5000;
 const MAX_IGNORE_COUNT = 3;
 const TEST_TIMEOUT_MS = 3 * 60 * 1000;
+const BREAK_PENALTY_INTERVAL_MS = 3 * 1000;
+const DEMO_USER_ID = 1;
 
 const persistEvent = async (sessionId: number, type: string) => {
   try {
-    await sessionService.insertEvent(sessionId, type);
+    await sessionService.insertEvent(sessionId, type.toLowerCase());
   } catch (err) {
     console.error('Failed to persist session event:', type, err);
   }
@@ -71,6 +74,8 @@ export const startSessionEngine = ({
     breakReminderPending: false,
     cooldownUntil: null,
     timeReachedNotified: false,
+    penaltyActive: false,
+    lastBreakPenaltyAt: null,
   };
 
   const intervalId = setInterval(() => {
@@ -104,18 +109,37 @@ const tickSession = async (sessionId: number) => {
     session.lastStartTimestamp = now;
 
     if (
-      session.studyTimeMs >= session.plannedDurationMs &&
-      !session.timeReachedNotified
+      session.penaltyActive &&
+      session.lastBreakPenaltyAt !== null &&
+      now - session.lastBreakPenaltyAt >= BREAK_PENALTY_INTERVAL_MS
     ) {
-      session.timeReachedNotified = true;
-      session.timeReachedAt = now;
+      const penaltySteps = Math.floor(
+        (now - session.lastBreakPenaltyAt) / BREAK_PENALTY_INTERVAL_MS,
+      );
 
-      session.breakReminderPending = false;
-      session.cooldownUntil = null;
+      session.lastBreakPenaltyAt += penaltySteps * BREAK_PENALTY_INTERVAL_MS;
 
       updateSession(sessionId, session);
 
-      await emitAndPersist(sessionId, 'SESSION_TIME_REACHED');
+      const penaltyResult = await dailyStatsService.applyBreakIgnorePenalty(
+        DEMO_USER_ID,
+        penaltySteps,
+      );
+
+      await emitAndPersist(sessionId, 'PENALTY_TRIGGERED', {
+        reason: 'continued_study_without_break',
+        message: `You kept studying without taking a break. Energy -${penaltySteps}, Focus -${penaltySteps}, Stress +${penaltySteps}.`,
+        penalty: penaltyResult.penalty,
+        stats: {
+          energy: penaltyResult.stats.energy,
+          focus: penaltyResult.stats.focus,
+          stress: penaltyResult.stats.stress,
+          healthPoints: penaltyResult.stats.health_points,
+          burnoutRisk: penaltyResult.stats.burnout_risk,
+          healthMessage: penaltyResult.stats.health_message,
+        },
+      });
+
       return;
     }
 
@@ -131,12 +155,10 @@ const tickSession = async (sessionId: number) => {
       return;
     }
 
-    if (
-      session.breakReminderPending &&
-      session.cooldownUntil !== null &&
-      now >= session.cooldownUntil
-    ) {
+    if (session.cooldownUntil !== null && now >= session.cooldownUntil) {
       session.cooldownUntil = null;
+      session.breakReminderPending = true;
+
       updateSession(sessionId, session);
 
       await emitAndPersist(sessionId, 'BREAK_REMINDER');
@@ -194,6 +216,8 @@ const startBreak = async (sessionId: number) => {
   session.breakReminderPending = false;
   session.cooldownUntil = null;
   session.ignoreCount = 0;
+  session.penaltyActive = false;
+  session.lastBreakPenaltyAt = null;
   session.breakCount += 1;
 
   updateSession(sessionId, session);
@@ -212,19 +236,28 @@ export const ignoreBreak = async (sessionId: number) => {
   if (!session.breakReminderPending) return;
 
   session.ignoreCount += 1;
+  session.breakReminderPending = false;
 
   await emitAndPersist(sessionId, 'BREAK_IGNORED');
 
   if (session.ignoreCount >= MAX_IGNORE_COUNT) {
-    session.breakReminderPending = false;
     session.cooldownUntil = null;
     session.ignoreCount = 0;
+
+    session.penaltyActive = true;
+    session.lastBreakPenaltyAt = Date.now();
 
     session.nextBreakAtMs = session.studyTimeMs + session.breakIntervalMs;
 
     updateSession(sessionId, session);
 
-    await emitAndPersist(sessionId, 'PENALTY_TRIGGERED');
+    await emitAndPersist(sessionId, 'PENALTY_TRIGGERED', {
+      reason: 'three_break_reminders_ignored',
+      message:
+        'You ignored three break reminders. Penalty mode is now active. Every 3 minutes without a break will reduce energy and focus, and increase stress.',
+      penaltyEveryMinutes: 3,
+    });
+
     return;
   }
 
@@ -265,7 +298,11 @@ export const endSessionByUser = async (sessionId: number) => {
     updateSession(sessionId, session);
   }
 
-  await sessionService.endSession(sessionId, 'completed');
+  await sessionService.endSession(
+    sessionId,
+    'completed',
+    session?.studyTimeMs ?? 0,
+  );
   await emitAndPersist(sessionId, 'STOP_ACCEPTED');
   await emitAndPersist(sessionId, 'SESSION_ENDED');
 
@@ -281,7 +318,11 @@ export const timeoutSession = async (sessionId: number) => {
     updateSession(sessionId, session);
   }
 
-  await sessionService.endSession(sessionId, 'timed_out');
+  await sessionService.endSession(
+    sessionId,
+    'timed_out',
+    session?.studyTimeMs ?? 0,
+  );
   await emitAndPersist(sessionId, 'SESSION_TIMEOUT');
 
   removeSession(sessionId);
