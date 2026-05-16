@@ -16,7 +16,6 @@ export type SessionRuntimeState = {
   nextBreakAtMs: number;
   breakStartedAt: number | null;
   currentBreakId: number | null;
-  timeReachedAt: number | null;
 
   breakCount: number;
   ignoreCount: number;
@@ -24,6 +23,10 @@ export type SessionRuntimeState = {
   breakReminderPending: boolean;
   cooldownUntil: number | null;
   timeReachedNotified: boolean;
+  timeReachedAt: number | null;
+
+  penaltyActive: boolean;
+  lastBreakPenaltyAt: number | null;
 
   intervalId?: NodeJS.Timeout;
 };

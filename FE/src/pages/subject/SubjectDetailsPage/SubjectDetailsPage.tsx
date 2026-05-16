@@ -30,6 +30,7 @@ type Task = {
   status: 'todo' | 'in_progress' | 'done';
   estimated_hours: number;
   priority: 'low' | 'medium' | 'high';
+  total_study_ms?: number;
 };
 
 type Subject = {

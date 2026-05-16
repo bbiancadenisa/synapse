@@ -32,6 +32,7 @@ export const startStudySession = async (req: Request, res: Response) => {
     });
 
     const session = sessionResult.rows[0];
+    await sessionService.markTaskAsInProgress(Number(taskId));
 
     await sessionService.createSessionSettings({
       sessionId: session.id,
@@ -168,23 +169,24 @@ export const getStudySessionsByTaskId = async (req: Request, res: Response) => {
 
     const result = await pool.query(
       `
-      SELECT
-        ss.id,
-        ss.task_id,
-        ss.status,
-        ss.start_time,
-        ss.end_time,
-        ss.planned_duration_minutes,
-        ss.created_at,
-        COALESCE(COUNT(ssb.id), 0)::int AS break_count
-      FROM study_sessions ss
-      LEFT JOIN study_session_breaks ssb
-        ON ssb.session_id = ss.id
-        AND ssb.status = 'ended'
-      WHERE ss.task_id = $1
-      GROUP BY ss.id
-      ORDER BY ss.created_at DESC
-      `,
+  SELECT
+    ss.id,
+    ss.task_id,
+    ss.status,
+    ss.start_time,
+    ss.end_time,
+    ss.planned_duration_minutes,
+    ss.study_time_ms,
+    ss.created_at,
+    COALESCE(COUNT(ssb.id), 0)::int AS break_count
+  FROM study_sessions ss
+  LEFT JOIN study_session_breaks ssb
+    ON ssb.session_id = ss.id
+    AND ssb.status = 'ended'
+  WHERE ss.task_id = $1
+  GROUP BY ss.id
+  ORDER BY ss.created_at DESC
+  `,
       [Number(taskId)],
     );
 

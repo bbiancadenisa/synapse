@@ -50,7 +50,15 @@ export const SessionPage = () => {
   const [isOnBreak, setIsOnBreak] = useState(false);
   const [sessionDone, setSessionDone] = useState(false);
   const [penaltyTriggered, setPenaltyTriggered] = useState(false);
+  const [penaltyMessage, setPenaltyMessage] = useState<string | null>(null);
 
+  const [liveStats, setLiveStats] = useState<{
+    energy?: number;
+    focus?: number;
+    stress?: number;
+    healthPoints?: number;
+    burnoutRisk?: string;
+  } | null>(null);
   const studyProgress = useMemo(() => {
     if (!plannedSeconds) return 0;
     return Math.min((studySeconds / plannedSeconds) * 100, 100);
@@ -126,8 +134,19 @@ export const SessionPage = () => {
           break;
 
         case 'PENALTY_TRIGGERED':
+        case 'penalty_triggered':
           setPenaltyTriggered(true);
           setBreakReminder(false);
+
+          setPenaltyMessage(
+            event.payload?.message ||
+              'Penalty triggered. Your health stats were affected.',
+          );
+
+          if (event.payload?.stats) {
+            setLiveStats(event.payload.stats);
+          }
+
           break;
 
         default:
@@ -353,10 +372,36 @@ export const SessionPage = () => {
           )}
 
           {penaltyTriggered && (
-            <Paper sx={{ p: 3, borderRadius: 5, background: '#fef2f2' }}>
-              <Typography fontWeight={800}>
-                You ignored too many break reminders. Penalty triggered.
-              </Typography>
+            <Paper
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+              }}
+            >
+              <Stack spacing={1.5}>
+                <Typography sx={{ fontWeight: 600, color: '#991b1b' }}>
+                  Health stats affected
+                </Typography>
+
+                <Typography sx={{ color: '#7f1d1d', fontSize: 14 }}>
+                  {penaltyMessage ||
+                    'You ignored too many break reminders. Penalty mode is active.'}
+                </Typography>
+
+                {liveStats && (
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    <Chip label={`Energy: ${liveStats.energy ?? '-'}%`} />
+                    <Chip label={`Focus: ${liveStats.focus ?? '-'}%`} />
+                    <Chip label={`Stress: ${liveStats.stress ?? '-'}%`} />
+                    <Chip label={`Health: ${liveStats.healthPoints ?? '-'}%`} />
+                    {liveStats.burnoutRisk && (
+                      <Chip label={`Risk: ${liveStats.burnoutRisk}`} />
+                    )}
+                  </Stack>
+                )}
+              </Stack>
             </Paper>
           )}
 
