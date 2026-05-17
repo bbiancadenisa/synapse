@@ -1,22 +1,16 @@
-import { api } from './config/api';
+import type {
+  CreateTaskPayload,
+  Task,
+  TaskStatus,
+  UpdateTaskPayload,
+} from '../types/taskTypes';
+import { api } from './api';
 
-export type TaskStatus = 'todo' | 'in_progress' | 'done';
-export type TaskPriority = 'low' | 'medium' | 'high';
-
-// CREATE
-export const createTask = async (data: {
-  subject_id: number;
-  title: string;
-  description?: string;
-  estimated_hours: number;
-  priority: TaskPriority;
-  deadline?: string;
-}) => {
+export const createTask = async (data: CreateTaskPayload) => {
   const res = await api.post('/tasks', data);
   return res.data;
 };
 
-// GET TASKS BY SUBJECT (cu sort + filter)
 export const getTasks = async (
   subjectId: number,
   params?: {
@@ -25,32 +19,19 @@ export const getTasks = async (
   },
 ) => {
   const res = await api.get(`/tasks/${subjectId}`, { params });
-  return res.data;
+  return res.data as Task[];
 };
 
-// GET SINGLE TASK
 export const getTaskById = async (id: number) => {
   const res = await api.get(`/tasks/task/${id}`);
-  return res.data;
+  return res.data as Task;
 };
 
-// UPDATE TASK
-export const updateTask = async (
-  id: number,
-  data: {
-    title?: string;
-    description?: string;
-    estimated_hours?: number;
-    deadline?: string;
-    status?: TaskStatus;
-    priority?: TaskPriority;
-  },
-) => {
+export const updateTask = async (id: number, data: UpdateTaskPayload) => {
   const res = await api.put(`/tasks/${id}`, data);
-  return res.data;
+  return res.data as Task;
 };
 
-// DELETE TASK
 export const deleteTask = async (id: number) => {
   const res = await api.delete(`/tasks/${id}`);
   return res.data;

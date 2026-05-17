@@ -13,16 +13,7 @@ import { DateTimePicker } from '@mui/x-date-pickers';
 import dayjs, { Dayjs } from 'dayjs';
 import { useEffect, useState } from 'react';
 import { updateTask } from '../../services/task';
-
-type Task = {
-  id: number;
-  title: string;
-  description?: string;
-  estimated_hours: number;
-  priority: 'low' | 'medium' | 'high';
-  status: 'todo' | 'in_progress' | 'done';
-  deadline?: string;
-};
+import type { Task } from '../../types/taskTypes';
 
 type Props = {
   open: boolean;
