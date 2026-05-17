@@ -1,5 +1,4 @@
 import {
-  Alert,
   Button,
   Dialog,
   DialogActions,
@@ -11,144 +10,68 @@ import {
   Typography,
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers';
-import { Dayjs } from 'dayjs';
-import { useState } from 'react';
 
-import { SUBJECT_COLORS } from '../../utils/constants';
+import type {
+  CreateSubjectPayload,
+  Difficulty,
+} from '../../types/subjectTypes';
 import { ColorPicker } from '../ColorPicker/ColorPicker';
-import styles from './CreateSubjectModal.module.css';
+import {
+  cancelButtonSx,
+  createButtonSx,
+  dialogPaperSx,
+  helperTextSx,
+  subtitleSx,
+  titleSx,
+} from './CreateSubjectModal.styles';
+import { useCreateSubjectForm } from './useCreateSubjectForm';
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  onCreate: (data: {
-    name: string;
-    description: string;
-    difficulty: 'low' | 'medium' | 'high';
-    color: string;
-    overall_deadline: string;
-  }) => void;
+  onCreate: (data: CreateSubjectPayload) => void;
 };
 
 export const CreateSubjectModal = ({ open, onClose, onCreate }: Props) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [deadline, setDeadline] = useState<Dayjs | null>(null);
-  const [color, setColor] = useState(SUBJECT_COLORS[0]);
-  const [difficulty, setDifficulty] = useState<'low' | 'medium' | 'high'>(
-    'low',
-  );
-  const [error, setError] = useState<string | null>(null);
-
-  const isFormValid = name.trim().length > 0 && !!deadline;
-
-  const resetForm = () => {
-    setName('');
-    setDescription('');
-    setDifficulty('low');
-    setDeadline(null);
-    setColor(SUBJECT_COLORS[0]);
-    setError(null);
-  };
-
-  const handleClose = () => {
-    resetForm();
-    onClose();
-  };
-
-  const handleSubmit = () => {
-    if (!isFormValid || !deadline) return;
-
-    onCreate({
-      name: name.trim(),
-      description,
-      difficulty,
-      color,
-      overall_deadline: deadline.toISOString(),
-    });
-
-    resetForm();
-    onClose();
-  };
+  const form = useCreateSubjectForm(onCreate, onClose);
 
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
+      onClose={form.handleClose}
       fullWidth
       maxWidth="sm"
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 24px 60px rgba(15, 23, 42, 0.16)',
-        },
-      }}
+      PaperProps={{ sx: dialogPaperSx }}
     >
       <DialogTitle sx={{ px: 3, pt: 3, pb: 1 }}>
-        <Typography
-          sx={{
-            fontSize: 22,
-            fontWeight: 600,
-            color: '#111827',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          Create subject
-        </Typography>
+        <Typography sx={titleSx}>Create subject</Typography>
 
-        <Typography
-          sx={{
-            mt: 0.5,
-            fontSize: 14,
-            color: '#64748b',
-          }}
-        >
+        <Typography sx={subtitleSx}>
           Add a new study area with a deadline, difficulty, and color.
         </Typography>
       </DialogTitle>
 
       <DialogContent sx={{ px: 3, pt: 2 }}>
-        <Stack spacing={2.25} className={styles.container}>
-          {error && (
-            <Alert
-              severity="error"
-              sx={{
-                borderRadius: 2,
-                fontSize: 14,
-              }}
-            >
-              {error}
-            </Alert>
-          )}
-
-          <Typography
-            sx={{
-              fontSize: 13,
-              color: '#64748b',
-            }}
-          >
+        <Stack spacing={2.25} sx={{ pt: 1 }}>
+          <Typography sx={helperTextSx}>
             Fields marked with <strong>*</strong> are required.
           </Typography>
 
           <TextField
             label="Name"
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              setError(null);
-            }}
+            value={form.name}
+            onChange={(e) => form.setName(e.target.value)}
             fullWidth
             required
             size="small"
           />
 
-          <ColorPicker value={color} onChange={setColor} />
+          <ColorPicker value={form.color} onChange={form.setColor} />
 
           <TextField
             label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={form.description}
+            onChange={(e) => form.setDescription(e.target.value)}
             fullWidth
             multiline
             rows={3}
@@ -157,11 +80,8 @@ export const CreateSubjectModal = ({ open, onClose, onCreate }: Props) => {
 
           <DateTimePicker
             label="Deadline"
-            value={deadline}
-            onChange={(newValue) => {
-              setDeadline(newValue);
-              setError(null);
-            }}
+            value={form.deadline}
+            onChange={form.setDeadline}
             disablePast
             ampm={false}
             format="DD/MM/YYYY HH:mm"
@@ -178,10 +98,8 @@ export const CreateSubjectModal = ({ open, onClose, onCreate }: Props) => {
           <TextField
             select
             label="Difficulty"
-            value={difficulty}
-            onChange={(e) =>
-              setDifficulty(e.target.value as 'low' | 'medium' | 'high')
-            }
+            value={form.difficulty}
+            onChange={(e) => form.setDifficulty(e.target.value as Difficulty)}
             fullWidth
             size="small"
           >
@@ -193,36 +111,15 @@ export const CreateSubjectModal = ({ open, onClose, onCreate }: Props) => {
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
-        <Button
-          onClick={handleClose}
-          sx={{
-            borderRadius: 2,
-            textTransform: 'none',
-            color: '#64748b',
-          }}
-        >
+        <Button onClick={form.handleClose} sx={cancelButtonSx}>
           Cancel
         </Button>
 
         <Button
           variant="contained"
-          onClick={handleSubmit}
-          disabled={!isFormValid}
-          sx={{
-            borderRadius: 2,
-            textTransform: 'none',
-            fontWeight: 500,
-            background: isFormValid ? '#4f46e5' : '#cbd5e1',
-            boxShadow: 'none',
-            '&:hover': {
-              background: isFormValid ? '#4338ca' : '#cbd5e1',
-              boxShadow: 'none',
-            },
-            '&.Mui-disabled': {
-              color: '#ffffff',
-              background: '#cbd5e1',
-            },
-          }}
+          onClick={form.handleSubmit}
+          disabled={!form.isFormValid}
+          sx={createButtonSx(form.isFormValid)}
         >
           Create subject
         </Button>

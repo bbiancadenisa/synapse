@@ -10,22 +10,18 @@ import {
   Typography,
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import dayjs, { Dayjs } from 'dayjs';
-import { useEffect, useState } from 'react';
-import { updateSubject } from '../../services/subject';
+
+import type { Difficulty, Subject } from '../../types/subjectTypes';
 import { ColorPicker } from '../ColorPicker/ColorPicker';
-import styles from './EditSubjectModal.module.css';
-
-type Difficulty = 'low' | 'medium' | 'high';
-
-type Subject = {
-  id: number;
-  name: string;
-  description?: string;
-  difficulty: Difficulty;
-  color?: string;
-  overall_deadline: string;
-};
+import {
+  cancelButtonSx,
+  dialogPaperSx,
+  helperTextSx,
+  saveButtonSx,
+  subtitleSx,
+  titleSx,
+} from './EditSubjectModal.styles';
+import { useEditSubjectForm } from './useEditSubjectForm';
 
 type Props = {
   open: boolean;
@@ -40,51 +36,12 @@ export const EditSubjectModal = ({
   onClose,
   onUpdated,
 }: Props) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [difficulty, setDifficulty] = useState<Difficulty>('low');
-  const [deadline, setDeadline] = useState<Dayjs | null>(null);
-  const [color, setColor] = useState<string>('');
-
-  const originalDeadline = subject?.overall_deadline
-    ? dayjs(subject.overall_deadline).toISOString()
-    : '';
-
-  const isDirty =
-    name !== subject.name ||
-    description !== (subject.description || '') ||
-    difficulty !== subject.difficulty ||
-    color !== (subject.color || '#A5B4FC') ||
-    (deadline ? deadline.toISOString() : '') !== originalDeadline;
-
-  const isFormValid = name.trim().length > 0 && !!deadline;
-
-  useEffect(() => {
-    if (!open || !subject) return;
-
-    setName(subject.name);
-    setDescription(subject.description || '');
-    setDifficulty(subject.difficulty);
-    setColor(subject.color || '#A5B4FC');
-    setDeadline(
-      subject.overall_deadline ? dayjs(subject.overall_deadline) : null,
-    );
-  }, [open, subject]);
-
-  const handleSave = async () => {
-    if (!isFormValid || !deadline) return;
-
-    await updateSubject(subject.id, {
-      name: name.trim(),
-      description,
-      difficulty,
-      color,
-      overall_deadline: deadline.toISOString(),
-    });
-
-    onUpdated();
-    onClose();
-  };
+  const form = useEditSubjectForm({
+    open,
+    subject,
+    onClose,
+    onUpdated,
+  });
 
   if (!subject) return null;
 
@@ -94,52 +51,26 @@ export const EditSubjectModal = ({
       onClose={onClose}
       fullWidth
       maxWidth="sm"
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 24px 60px rgba(15, 23, 42, 0.16)',
-        },
-      }}
+      PaperProps={{ sx: dialogPaperSx }}
     >
       <DialogTitle sx={{ px: 3, pt: 3, pb: 1 }}>
-        <Typography
-          sx={{
-            fontSize: 22,
-            fontWeight: 600,
-            color: '#111827',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          Edit subject
-        </Typography>
+        <Typography sx={titleSx}>Edit subject</Typography>
 
-        <Typography
-          sx={{
-            mt: 0.5,
-            fontSize: 14,
-            color: '#64748b',
-          }}
-        >
+        <Typography sx={subtitleSx}>
           Update the subject details, deadline, difficulty, and color.
         </Typography>
       </DialogTitle>
 
       <DialogContent sx={{ px: 3, pt: 2 }}>
-        <Stack spacing={2.25} className={styles.wrapper}>
-          <Typography
-            sx={{
-              fontSize: 13,
-              color: '#64748b',
-            }}
-          >
+        <Stack spacing={2.25} sx={{ pt: 1 }}>
+          <Typography sx={helperTextSx}>
             Fields marked with <strong>*</strong> are required.
           </Typography>
 
           <TextField
             label="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={form.name}
+            onChange={(e) => form.setName(e.target.value)}
             fullWidth
             required
             size="small"
@@ -147,8 +78,8 @@ export const EditSubjectModal = ({
 
           <TextField
             label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={form.description}
+            onChange={(e) => form.setDescription(e.target.value)}
             fullWidth
             multiline
             rows={3}
@@ -157,8 +88,8 @@ export const EditSubjectModal = ({
 
           <DateTimePicker
             label="Deadline"
-            value={deadline}
-            onChange={(newValue) => setDeadline(newValue)}
+            value={form.deadline}
+            onChange={form.setDeadline}
             disablePast
             ampm={false}
             format="DD/MM/YYYY HH:mm"
@@ -174,8 +105,8 @@ export const EditSubjectModal = ({
           <TextField
             select
             label="Difficulty"
-            value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+            value={form.difficulty}
+            onChange={(e) => form.setDifficulty(e.target.value as Difficulty)}
             fullWidth
             size="small"
           >
@@ -184,41 +115,20 @@ export const EditSubjectModal = ({
             <MenuItem value="high">High</MenuItem>
           </TextField>
 
-          <ColorPicker value={color} onChange={setColor} />
+          <ColorPicker value={form.color} onChange={form.setColor} />
         </Stack>
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
-        <Button
-          onClick={onClose}
-          sx={{
-            borderRadius: 2,
-            textTransform: 'none',
-            color: '#64748b',
-          }}
-        >
+        <Button onClick={onClose} sx={cancelButtonSx}>
           Cancel
         </Button>
 
         <Button
           variant="contained"
-          onClick={handleSave}
-          disabled={!isDirty || !isFormValid}
-          sx={{
-            borderRadius: 2,
-            textTransform: 'none',
-            fontWeight: 500,
-            background: isDirty && isFormValid ? '#4f46e5' : '#cbd5e1',
-            boxShadow: 'none',
-            '&:hover': {
-              background: isDirty && isFormValid ? '#4338ca' : '#cbd5e1',
-              boxShadow: 'none',
-            },
-            '&.Mui-disabled': {
-              color: '#ffffff',
-              background: '#cbd5e1',
-            },
-          }}
+          onClick={form.handleSave}
+          disabled={!form.isDirty || !form.isFormValid}
+          sx={saveButtonSx(form.isDirty && form.isFormValid)}
         >
           Save changes
         </Button>
