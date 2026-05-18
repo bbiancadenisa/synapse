@@ -126,67 +126,87 @@ export const getSubjectById = async (id: number, userId: number) => {
     `
     SELECT *
     FROM subjects
-    WHERE id = $1 AND user_id = $2
+    WHERE id = $1
+      AND user_id = $2
     `,
     [id, userId],
   );
 };
 
-export const getSubjectTasks = async (subjectId: number) => {
+export const getSubjectTasks = async (subjectId: number, userId: number) => {
   return pool.query(
     `
-    SELECT *
-    FROM tasks
-    WHERE subject_id = $1
-    ORDER BY created_at DESC
+    SELECT t.*
+    FROM tasks t
+    JOIN subjects s
+      ON s.id = t.subject_id
+    WHERE t.subject_id = $1
+      AND s.user_id = $2
+    ORDER BY t.created_at DESC
     `,
-    [subjectId],
+    [subjectId, userId],
   );
 };
 
-export const getTasksForDeleteCheck = async (subjectId: number) => {
+export const getTasksForDeleteCheck = async (
+  subjectId: number,
+  userId: number,
+) => {
   return pool.query(
     `
-    SELECT status
-    FROM tasks
-    WHERE subject_id = $1
+    SELECT t.status
+    FROM tasks t
+    JOIN subjects s
+      ON s.id = t.subject_id
+    WHERE t.subject_id = $1
+      AND s.user_id = $2
     `,
-    [subjectId],
+    [subjectId, userId],
   );
 };
 
-export const deleteTasksBySubjectId = async (subjectId: number) => {
+export const deleteTasksBySubjectId = async (
+  subjectId: number,
+  userId: number,
+) => {
   return pool.query(
     `
-    DELETE FROM tasks
-    WHERE subject_id = $1
+    DELETE FROM tasks t
+    USING subjects s
+    WHERE t.subject_id = s.id
+      AND t.subject_id = $1
+      AND s.user_id = $2
     `,
-    [subjectId],
+    [subjectId, userId],
   );
 };
 
-export const deleteSubjectById = async (subjectId: number) => {
+export const deleteSubjectById = async (subjectId: number, userId: number) => {
   return pool.query(
     `
     DELETE FROM subjects
     WHERE id = $1
+      AND user_id = $2
     `,
-    [subjectId],
+    [subjectId, userId],
   );
 };
 
 export const updateSubject = async (
   subjectId: number,
+  userId: number,
   fields: string[],
   values: any[],
   nextIndex: number,
 ) => {
   values.push(subjectId);
+  values.push(userId);
 
   const query = `
     UPDATE subjects
     SET ${fields.join(', ')}, updated_at = NOW()
     WHERE id = $${nextIndex}
+      AND user_id = $${nextIndex + 1}
     RETURNING *
   `;
 

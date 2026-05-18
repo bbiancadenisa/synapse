@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import * as subjectService from '../services/subjectService';
 import * as taskService from '../services/taskService';
 import {
   isValidTaskPriority,
@@ -9,6 +10,8 @@ import {
 
 export const createTask = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
+
     const {
       subject_id,
       title,
@@ -23,6 +26,16 @@ export const createTask = async (req: Request, res: Response) => {
     if (!subject_id || !title || parsedEstimatedHours === null || !priority) {
       return res.status(400).json({
         error: 'subject_id, title, estimated_hours and priority are required',
+      });
+    }
+
+    const subjectId = Number(subject_id);
+
+    const subject = await subjectService.getSubjectById(subjectId, userId);
+
+    if (!subject.rows[0]) {
+      return res.status(404).json({
+        error: 'Subject not found',
       });
     }
 
@@ -43,7 +56,7 @@ export const createTask = async (req: Request, res: Response) => {
     }
 
     const result = await taskService.createTask({
-      subjectId: Number(subject_id),
+      subjectId,
       title,
       description,
       estimatedHours: parsedEstimatedHours,
@@ -60,6 +73,8 @@ export const createTask = async (req: Request, res: Response) => {
 
 export const getTasksBySubject = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
+
     const { subjectId } = req.params;
     const { sort = 'created_desc', status } = req.query;
 
@@ -71,6 +86,7 @@ export const getTasksBySubject = async (req: Request, res: Response) => {
 
     const result = await taskService.getTasksBySubject({
       subjectId: Number(subjectId),
+      userId,
       sort: sort as string,
       status: status as string | undefined,
     });
@@ -84,12 +100,15 @@ export const getTasksBySubject = async (req: Request, res: Response) => {
 
 export const getTaskById = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { id } = req.params;
 
-    const result = await taskService.getTaskById(Number(id));
+    const result = await taskService.getTaskById(Number(id), userId);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Task not found' });
+      return res.status(404).json({
+        error: 'Task not found',
+      });
     }
 
     return res.json(result.rows[0]);
@@ -101,14 +120,20 @@ export const getTaskById = async (req: Request, res: Response) => {
 
 export const updateTask = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
+
     const { id } = req.params;
+    const taskId = Number(id);
+
     const { title, description, estimated_hours, deadline, status, priority } =
       req.body;
 
-    const existing = await taskService.getTaskById(Number(id));
+    const existing = await taskService.getTaskById(taskId, userId);
 
     if (existing.rows.length === 0) {
-      return res.status(404).json({ error: 'Task not found' });
+      return res.status(404).json({
+        error: 'Task not found',
+      });
     }
 
     const task = existing.rows[0];
@@ -149,7 +174,7 @@ export const updateTask = async (req: Request, res: Response) => {
       }
     }
 
-    const result = await taskService.updateTask(Number(id), {
+    const result = await taskService.updateTask(taskId, {
       title: title ?? task.title,
       description: description ?? task.description,
       estimatedHours: parsedEstimatedHours,
@@ -167,10 +192,12 @@ export const updateTask = async (req: Request, res: Response) => {
 
 export const deleteTask = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
+
     const { id } = req.params;
     const taskId = Number(id);
 
-    const existing = await taskService.getTaskById(taskId);
+    const existing = await taskService.getTaskById(taskId, userId);
 
     if (existing.rows.length === 0) {
       return res.status(404).json({
@@ -178,7 +205,10 @@ export const deleteTask = async (req: Request, res: Response) => {
       });
     }
 
-    const activeSession = await taskService.getActiveSessionForTask(taskId);
+    const activeSession = await taskService.getActiveSessionForTask(
+      taskId,
+      userId,
+    );
 
     if (activeSession.rows.length > 0) {
       return res.status(400).json({
@@ -186,7 +216,10 @@ export const deleteTask = async (req: Request, res: Response) => {
       });
     }
 
-    const existingSessions = await taskService.getStudySessionsForTask(taskId);
+    const existingSessions = await taskService.getStudySessionsForTask(
+      taskId,
+      userId,
+    );
 
     if (existingSessions.rows.length > 0) {
       return res.status(400).json({
@@ -197,7 +230,9 @@ export const deleteTask = async (req: Request, res: Response) => {
 
     await taskService.deleteTaskById(taskId);
 
-    return res.json({ message: 'Task deleted' });
+    return res.json({
+      message: 'Task deleted',
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: 'Error deleting task' });

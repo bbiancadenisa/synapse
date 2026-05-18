@@ -2,6 +2,7 @@ export type RuntimeSessionStatus = 'running' | 'break' | 'ended';
 
 export type SessionRuntimeState = {
   sessionId: number;
+  userId: number;
   startTime: number;
 
   plannedDurationMs: number;
