@@ -43,27 +43,33 @@ export const createSessionSettings = async (data: {
   );
 };
 
-export const getSessionById = async (id: number, userId = 1) => {
+export const getSessionById = async (id: number, userId: number) => {
   return pool.query(
     `
     SELECT *
     FROM study_sessions
-    WHERE id = $1 AND user_id = $2
+    WHERE id = $1
+      AND user_id = $2
     `,
     [id, userId],
   );
 };
 
-export const updateSessionStatus = async (id: number, status: string) => {
+export const updateSessionStatus = async (
+  id: number,
+  userId: number,
+  status: string,
+) => {
   return pool.query(
     `
     UPDATE study_sessions
-    SET status = $2,
+    SET status = $3,
         updated_at = NOW()
     WHERE id = $1
+      AND user_id = $2
     RETURNING *
     `,
-    [id, status],
+    [id, userId, status],
   );
 };
 
@@ -97,33 +103,39 @@ export const insertEvent = async (sessionId: number, type: string) => {
   );
 };
 
-export const getSessionEvents = async (sessionId: number) => {
+export const getSessionEvents = async (sessionId: number, userId: number) => {
   return pool.query(
     `
-    SELECT *
-    FROM session_events
-    WHERE session_id = $1
-    ORDER BY created_at ASC
+    SELECT se.*
+    FROM session_events se
+    JOIN study_sessions ss
+      ON ss.id = se.session_id
+    WHERE se.session_id = $1
+      AND ss.user_id = $2
+    ORDER BY se.created_at ASC
     `,
-    [sessionId],
+    [sessionId, userId],
   );
 };
 
-export const markTaskAsInProgress = async (taskId: number) => {
+export const markTaskAsInProgress = async (taskId: number, userId: number) => {
   return pool.query(
     `
-    UPDATE tasks
+    UPDATE tasks t
     SET status = 'in_progress',
         updated_at = NOW()
-    WHERE id = $1
-      AND status = 'todo'
-    RETURNING *
+    FROM subjects s
+    WHERE t.subject_id = s.id
+      AND t.id = $1
+      AND s.user_id = $2
+      AND t.status = 'todo'
+    RETURNING t.*
     `,
-    [taskId],
+    [taskId, userId],
   );
 };
 
-export const getSessionsByTaskId = async (taskId: number) => {
+export const getSessionsByTaskId = async (taskId: number, userId: number) => {
   return pool.query(
     `
     SELECT
@@ -141,9 +153,10 @@ export const getSessionsByTaskId = async (taskId: number) => {
       ON ssb.session_id = ss.id
       AND ssb.status = 'ended'
     WHERE ss.task_id = $1
+      AND ss.user_id = $2
     GROUP BY ss.id
     ORDER BY ss.created_at DESC
     `,
-    [taskId],
+    [taskId, userId],
   );
 };

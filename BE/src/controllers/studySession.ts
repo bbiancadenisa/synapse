@@ -5,7 +5,6 @@ import {
   timeoutSession,
 } from '../engine/sessionEngine';
 import * as sessionService from '../services/sessionService';
-import { DEMO_USER_ID } from '../utils/demoUser';
 import {
   isValidSessionEventType,
   isValidStudySessionStatus,
@@ -14,6 +13,7 @@ import {
 
 export const startStudySession = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const config = validateStartSessionConfig(req.body);
 
     if (!config) {
@@ -30,14 +30,14 @@ export const startStudySession = async (req: Request, res: Response) => {
     } = config;
 
     const sessionResult = await sessionService.createSession({
-      userId: DEMO_USER_ID,
+      userId,
       taskId,
       plannedDurationMinutes,
     });
 
     const session = sessionResult.rows[0];
 
-    await sessionService.markTaskAsInProgress(taskId);
+    await sessionService.markTaskAsInProgress(taskId, userId);
 
     await sessionService.createSessionSettings({
       sessionId: session.id,
@@ -61,12 +61,10 @@ export const startStudySession = async (req: Request, res: Response) => {
 
 export const getStudySessionById = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { id } = req.params;
 
-    const result = await sessionService.getSessionById(
-      Number(id),
-      DEMO_USER_ID,
-    );
+    const result = await sessionService.getSessionById(Number(id), userId);
 
     return res.json(result.rows[0] || null);
   } catch (err) {
@@ -77,6 +75,7 @@ export const getStudySessionById = async (req: Request, res: Response) => {
 
 export const updateStudySession = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { id } = req.params;
     const { status } = req.body;
 
@@ -84,7 +83,11 @@ export const updateStudySession = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid status' });
     }
 
-    const result = await sessionService.updateSessionStatus(Number(id), status);
+    const result = await sessionService.updateSessionStatus(
+      Number(id),
+      userId,
+      status,
+    );
 
     return res.json(result.rows[0] || null);
   } catch (err) {
@@ -95,14 +98,12 @@ export const updateStudySession = async (req: Request, res: Response) => {
 
 export const endStudySession = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { id } = req.params;
 
     await endSessionByUser(Number(id));
 
-    const result = await sessionService.getSessionById(
-      Number(id),
-      DEMO_USER_ID,
-    );
+    const result = await sessionService.getSessionById(Number(id), userId);
 
     return res.json(result.rows[0] || null);
   } catch (err) {
@@ -113,14 +114,12 @@ export const endStudySession = async (req: Request, res: Response) => {
 
 export const timeoutStudySession = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { id } = req.params;
 
     await timeoutSession(Number(id));
 
-    const result = await sessionService.getSessionById(
-      Number(id),
-      DEMO_USER_ID,
-    );
+    const result = await sessionService.getSessionById(Number(id), userId);
 
     return res.json(result.rows[0] || null);
   } catch (err) {
@@ -151,9 +150,10 @@ export const createSessionEvent = async (req: Request, res: Response) => {
 
 export const getSessionEvents = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { id } = req.params;
 
-    const result = await sessionService.getSessionEvents(Number(id));
+    const result = await sessionService.getSessionEvents(Number(id), userId);
 
     return res.json(result.rows);
   } catch (err) {
@@ -164,9 +164,13 @@ export const getSessionEvents = async (req: Request, res: Response) => {
 
 export const getStudySessionsByTaskId = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { taskId } = req.params;
 
-    const result = await sessionService.getSessionsByTaskId(Number(taskId));
+    const result = await sessionService.getSessionsByTaskId(
+      Number(taskId),
+      userId,
+    );
 
     return res.json(result.rows);
   } catch (err) {

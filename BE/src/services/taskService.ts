@@ -36,6 +36,7 @@ export const createTask = async (data: {
 
 export const getTasksBySubject = async (params: {
   subjectId: number;
+  userId: number;
   sort?: string;
   status?: string;
 }) => {
@@ -59,20 +60,23 @@ export const getTasksBySubject = async (params: {
       break;
   }
 
-  const values: any[] = [params.subjectId];
+  const values: any[] = [params.subjectId, params.userId];
 
   let query = `
     SELECT
       t.*,
       COALESCE(SUM(ss.study_time_ms), 0)::int AS total_study_ms
     FROM tasks t
+    JOIN subjects s
+      ON s.id = t.subject_id
     LEFT JOIN study_sessions ss
       ON ss.task_id = t.id
     WHERE t.subject_id = $1
+      AND s.user_id = $2
   `;
 
   if (params.status) {
-    query += ` AND t.status = $2`;
+    query += ` AND t.status = $3`;
     values.push(params.status);
   }
 
@@ -84,14 +88,17 @@ export const getTasksBySubject = async (params: {
   return pool.query(query, values);
 };
 
-export const getTaskById = async (id: number) => {
+export const getTaskById = async (id: number, userId: number) => {
   return pool.query(
     `
-    SELECT *
-    FROM tasks
-    WHERE id = $1
+    SELECT t.*
+    FROM tasks t
+    JOIN subjects s
+      ON s.id = t.subject_id
+    WHERE t.id = $1
+      AND s.user_id = $2
     `,
-    [id],
+    [id, userId],
   );
 };
 
@@ -131,28 +138,36 @@ export const updateTask = async (
   );
 };
 
-export const getActiveSessionForTask = async (taskId: number) => {
+export const getActiveSessionForTask = async (
+  taskId: number,
+  userId: number,
+) => {
   return pool.query(
     `
     SELECT 1
     FROM study_sessions
     WHERE task_id = $1
+      AND user_id = $2
       AND end_time IS NULL
     LIMIT 1
     `,
-    [taskId],
+    [taskId, userId],
   );
 };
 
-export const getStudySessionsForTask = async (taskId: number) => {
+export const getStudySessionsForTask = async (
+  taskId: number,
+  userId: number,
+) => {
   return pool.query(
     `
     SELECT 1
     FROM study_sessions
     WHERE task_id = $1
+      AND user_id = $2
     LIMIT 1
     `,
-    [taskId],
+    [taskId, userId],
   );
 };
 

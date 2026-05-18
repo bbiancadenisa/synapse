@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import * as subjectService from '../services/subjectService';
-import { DEMO_USER_ID } from '../utils/demoUser';
 import {
   isValidDifficulty,
   parseBooleanQuery,
@@ -9,6 +8,7 @@ import {
 
 export const createSubject = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { name, description, difficulty, color, overall_deadline } = req.body;
 
     if (!name || !difficulty) {
@@ -23,7 +23,7 @@ export const createSubject = async (req: Request, res: Response) => {
       });
     }
 
-    const existing = await subjectService.findSubjectByName(DEMO_USER_ID, name);
+    const existing = await subjectService.findSubjectByName(userId, name);
 
     if (existing.rows.length > 0) {
       return res.status(400).json({
@@ -42,7 +42,7 @@ export const createSubject = async (req: Request, res: Response) => {
     }
 
     const result = await subjectService.createSubject({
-      userId: DEMO_USER_ID,
+      userId,
       name,
       description,
       difficulty,
@@ -53,12 +53,15 @@ export const createSubject = async (req: Request, res: Response) => {
     return res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Error creating subject' });
+    return res.status(500).json({
+      error: 'Error creating subject',
+    });
   }
 };
 
 export const getSubjects = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { difficulty, archived, sort } = req.query;
 
     if (difficulty && !isValidDifficulty(difficulty)) {
@@ -68,7 +71,7 @@ export const getSubjects = async (req: Request, res: Response) => {
     }
 
     const result = await subjectService.getSubjects({
-      userId: DEMO_USER_ID,
+      userId,
       difficulty: difficulty as string | undefined,
       archived: parseBooleanQuery(archived),
       sort: sort as string | undefined,
@@ -77,19 +80,19 @@ export const getSubjects = async (req: Request, res: Response) => {
     return res.json(result.rows);
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Error fetching subjects' });
+    return res.status(500).json({
+      error: 'Error fetching subjects',
+    });
   }
 };
 
 export const deleteSubject = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { id } = req.params;
     const subjectId = Number(id);
 
-    const subject = await subjectService.getSubjectById(
-      subjectId,
-      DEMO_USER_ID,
-    );
+    const subject = await subjectService.getSubjectById(subjectId, userId);
 
     if (!subject.rows[0]) {
       return res.status(404).json({
@@ -97,8 +100,10 @@ export const deleteSubject = async (req: Request, res: Response) => {
       });
     }
 
-    const tasks = await subjectService.getTasksForDeleteCheck(subjectId);
-
+    const tasks = await subjectService.getTasksForDeleteCheck(
+      subjectId,
+      userId,
+    );
     const hasProgress = tasks.rows.some(
       (task) => task.status === 'in_progress' || task.status === 'done',
     );
@@ -110,29 +115,28 @@ export const deleteSubject = async (req: Request, res: Response) => {
       });
     }
 
-    await subjectService.deleteTasksBySubjectId(subjectId);
-    await subjectService.deleteSubjectById(subjectId);
+    await subjectService.deleteTasksBySubjectId(subjectId, userId);
+    await subjectService.deleteSubjectById(subjectId, userId);
 
     return res.json({
       message: 'Subject deleted successfully',
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Error deleting subject' });
+    return res.status(500).json({
+      error: 'Error deleting subject',
+    });
   }
 };
 
 export const updateSubject = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const { id } = req.params;
     const subjectId = Number(id);
 
     const { name, description, difficulty, color, overall_deadline } = req.body;
-
-    const subject = await subjectService.getSubjectById(
-      subjectId,
-      DEMO_USER_ID,
-    );
+    const subject = await subjectService.getSubjectById(subjectId, userId);
 
     if (!subject.rows[0]) {
       return res.status(404).json({
@@ -146,16 +150,17 @@ export const updateSubject = async (req: Request, res: Response) => {
 
     if (difficulty !== undefined) {
       if (!isValidDifficulty(difficulty)) {
-        return res.status(400).json({ error: 'Invalid difficulty' });
+        return res.status(400).json({
+          error: 'Invalid difficulty',
+        });
       }
-
       fields.push(`difficulty = $${index++}`);
       values.push(difficulty);
     }
 
     if (name !== undefined) {
       const existing = await subjectService.findSubjectByName(
-        DEMO_USER_ID,
+        userId,
         name,
         subjectId,
       );
@@ -165,7 +170,6 @@ export const updateSubject = async (req: Request, res: Response) => {
           error: 'Subject name already exists',
         });
       }
-
       fields.push(`name = $${index++}`);
       values.push(name);
     }
@@ -188,7 +192,6 @@ export const updateSubject = async (req: Request, res: Response) => {
           error: deadlineValidation.error,
         });
       }
-
       fields.push(`overall_deadline = $${index++}`);
       values.push(overall_deadline);
     }
@@ -201,27 +204,30 @@ export const updateSubject = async (req: Request, res: Response) => {
 
     const result = await subjectService.updateSubject(
       subjectId,
+      userId,
       fields,
       values,
       index,
     );
 
-    return res.json({ data: result.rows[0] });
+    return res.json({
+      data: result.rows[0],
+    });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Error updating subject' });
+    return res.status(500).json({
+      error: 'Error updating subject',
+    });
   }
 };
 
 export const getSubjectById = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
+
     const { id } = req.params;
     const subjectId = Number(id);
-
-    const subject = await subjectService.getSubjectById(
-      subjectId,
-      DEMO_USER_ID,
-    );
+    const subject = await subjectService.getSubjectById(subjectId, userId);
 
     if (!subject.rows[0]) {
       return res.status(404).json({
@@ -229,7 +235,7 @@ export const getSubjectById = async (req: Request, res: Response) => {
       });
     }
 
-    const tasks = await subjectService.getSubjectTasks(subjectId);
+    const tasks = await subjectService.getSubjectTasks(subjectId, userId);
 
     return res.json({
       subject: subject.rows[0],
@@ -237,6 +243,8 @@ export const getSubjectById = async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ error: 'Error fetching subject' });
+    return res.status(500).json({
+      error: 'Error fetching subject',
+    });
   }
 };

@@ -15,7 +15,6 @@ const IGNORE_COOLDOWN_MS = 5000;
 const MAX_IGNORE_COUNT = 3;
 const TEST_TIMEOUT_MS = 3 * 60 * 1000;
 const BREAK_PENALTY_INTERVAL_MS = 3 * 1000;
-const DEMO_USER_ID = 1;
 
 const persistEvent = async (sessionId: number, type: string) => {
   try {
@@ -39,11 +38,13 @@ const emitAndPersist = async (sessionId: number, type: any, payload?: any) => {
 
 export const startSessionEngine = ({
   sessionId,
+  userId,
   plannedDurationMinutes,
   breakIntervalMinutes,
   breakDurationMinutes,
 }: {
   sessionId: number;
+  userId: number;
   plannedDurationMinutes: number;
   breakIntervalMinutes: number;
   breakDurationMinutes: number;
@@ -53,7 +54,7 @@ export const startSessionEngine = ({
   const state: SessionRuntimeState = {
     sessionId,
     startTime: now,
-
+    userId,
     plannedDurationMs: plannedDurationMinutes * 60 * 1000,
     breakIntervalMs: breakIntervalMinutes * 60 * 1000,
     breakDurationMs: breakDurationMinutes * 60 * 1000,
@@ -122,7 +123,7 @@ const tickSession = async (sessionId: number) => {
       updateSession(sessionId, session);
 
       const penaltyResult = await dailyStatsService.applyBreakIgnorePenalty(
-        DEMO_USER_ID,
+        session.userId,
         penaltySteps,
       );
 
@@ -200,15 +201,15 @@ const startBreak = async (sessionId: number) => {
 
   const now = Date.now();
 
-  const breakResult = await sessionBreakService.createBreak(
+  const breakResult = await sessionBreakService.createSessionBreak({
     sessionId,
-    Math.round(session.breakDurationMs / 60_000),
-  );
+    plannedBreakMinutes: Math.round(session.breakDurationMs / 60_000),
+  });
 
   const breakRow = breakResult.rows[0];
 
-  await sessionBreakService.markBreakAccepted(breakRow.id);
-  await sessionService.updateSessionStatus(sessionId, 'paused');
+  await sessionBreakService.markSessionBreakAccepted(breakRow.id);
+  await sessionService.updateSessionStatus(sessionId, session.userId, 'paused');
 
   session.status = 'break';
   session.breakStartedAt = now;
@@ -272,10 +273,14 @@ const endBreak = async (sessionId: number) => {
   if (!session || session.status !== 'break') return;
 
   if (session.currentBreakId !== null) {
-    await sessionBreakService.endBreak(session.currentBreakId);
+    await sessionBreakService.endSessionBreak(session.currentBreakId);
   }
 
-  await sessionService.updateSessionStatus(sessionId, 'running');
+  await sessionService.updateSessionStatus(
+    sessionId,
+    session.userId,
+    'running',
+  );
 
   session.status = 'running';
   session.breakStartedAt = null;
