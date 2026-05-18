@@ -1,9 +1,9 @@
 import { pool } from '../config/db';
 
-export const createBreak = async (
-  sessionId: number,
-  plannedBreakMinutes: number,
-) => {
+export const createSessionBreak = async (data: {
+  sessionId: number;
+  plannedBreakMinutes: number;
+}) => {
   return pool.query(
     `
     INSERT INTO study_session_breaks (
@@ -16,11 +16,11 @@ export const createBreak = async (
     VALUES ($1, NOW(), $2, 'active', NOW())
     RETURNING *
     `,
-    [sessionId, plannedBreakMinutes],
+    [data.sessionId, data.plannedBreakMinutes],
   );
 };
 
-export const markBreakAccepted = async (breakId: number) => {
+export const markSessionBreakAccepted = async (breakId: number) => {
   return pool.query(
     `
     UPDATE study_session_breaks
@@ -32,13 +32,14 @@ export const markBreakAccepted = async (breakId: number) => {
   );
 };
 
-export const endBreak = async (breakId: number) => {
+export const endSessionBreak = async (breakId: number) => {
   return pool.query(
     `
     UPDATE study_session_breaks
-    SET end_time = NOW(),
-        status = 'ended',
-        duration_ms = FLOOR(EXTRACT(EPOCH FROM (NOW() - start_time)) * 1000)
+    SET
+      end_time = NOW(),
+      status = 'ended',
+      duration_ms = FLOOR(EXTRACT(EPOCH FROM (NOW() - start_time)) * 1000)
     WHERE id = $1
     RETURNING *
     `,

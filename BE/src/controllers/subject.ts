@@ -1,16 +1,15 @@
 import { Request, Response } from 'express';
-import { pool } from '../config/db';
+import * as subjectService from '../services/subjectService';
+import { DEMO_USER_ID } from '../utils/demoUser';
+import {
+  isValidDifficulty,
+  parseBooleanQuery,
+  validateFutureDate,
+} from '../validators/subjectValidator';
 
-type Difficulty = 'low' | 'medium' | 'high';
-
-const allowedDifficulty: Difficulty[] = ['low', 'medium', 'high'];
-
-//CREATE SUBJECT
 export const createSubject = async (req: Request, res: Response) => {
   try {
     const { name, description, difficulty, color, overall_deadline } = req.body;
-
-    const allowedDifficulty: Difficulty[] = ['low', 'medium', 'high'];
 
     if (!name || !difficulty) {
       return res.status(400).json({
@@ -18,17 +17,13 @@ export const createSubject = async (req: Request, res: Response) => {
       });
     }
 
-    if (!allowedDifficulty.includes(difficulty)) {
+    if (!isValidDifficulty(difficulty)) {
       return res.status(400).json({
         error: 'Invalid difficulty. Use low | medium | high',
       });
     }
 
-    // check duplicate name per user
-    const existing = await pool.query(
-      `SELECT id FROM subjects WHERE user_id = $1 AND name = $2`,
-      [1, name],
-    );
+    const existing = await subjectService.findSubjectByName(DEMO_USER_ID, name);
 
     if (existing.rows.length > 0) {
       return res.status(400).json({
@@ -36,30 +31,24 @@ export const createSubject = async (req: Request, res: Response) => {
       });
     }
 
-    const result = await pool.query(
-      `
-      INSERT INTO subjects (
-        user_id,
-        name,
-        description,
-        difficulty,
-        color,
-        overall_deadline,
-        estimated_total_hours,
-        actual_hours_spent
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, 0, 0)
-      RETURNING *
-      `,
-      [
-        1,
-        name,
-        description || null,
-        difficulty,
-        color || null,
-        overall_deadline || null,
-      ],
-    );
+    if (overall_deadline) {
+      const deadlineValidation = validateFutureDate(overall_deadline);
+
+      if (!deadlineValidation.valid) {
+        return res.status(400).json({
+          error: deadlineValidation.error,
+        });
+      }
+    }
+
+    const result = await subjectService.createSubject({
+      userId: DEMO_USER_ID,
+      name,
+      description,
+      difficulty,
+      color,
+      overallDeadline: overall_deadline,
+    });
 
     return res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -68,67 +57,22 @@ export const createSubject = async (req: Request, res: Response) => {
   }
 };
 
-//GET SUBJECTS
 export const getSubjects = async (req: Request, res: Response) => {
   try {
     const { difficulty, archived, sort } = req.query;
 
-    let query = `
-      SELECT *
-      FROM subjects
-      WHERE user_id = $1
-    `;
-
-    const values: any[] = [1];
-    let index = 2;
-
-    if (difficulty) {
-      query += ` AND difficulty = $${index++}`;
-      values.push(difficulty);
+    if (difficulty && !isValidDifficulty(difficulty)) {
+      return res.status(400).json({
+        error: 'Invalid difficulty. Use low | medium | high',
+      });
     }
 
-    if (archived !== undefined) {
-      query += ` AND is_archived = $${index++}`;
-      values.push(archived === 'true');
-    } else {
-      query += ` AND is_archived = false`;
-    }
-
-    const sortMap: Record<string, string> = {
-      // DATE
-      created_desc: 'created_at DESC',
-      created_asc: 'created_at ASC',
-
-      // NAME
-      name_asc: 'name ASC',
-      name_desc: 'name DESC',
-
-      // DEADLINE
-      deadline_asc: 'overall_deadline ASC NULLS LAST',
-      deadline_desc: 'overall_deadline DESC NULLS LAST',
-
-      // DIFFICULTY (low < medium < high)
-      difficulty_asc: `
-        CASE difficulty
-          WHEN 'low' THEN 1
-          WHEN 'medium' THEN 2
-          WHEN 'high' THEN 3
-        END ASC
-      `,
-      difficulty_desc: `
-        CASE difficulty
-          WHEN 'low' THEN 1
-          WHEN 'medium' THEN 2
-          WHEN 'high' THEN 3
-        END DESC
-      `,
-    };
-
-    const orderBy = sortMap[sort as string] || sortMap.created_desc;
-
-    query += ` ORDER BY ${orderBy}`;
-
-    const result = await pool.query(query, values);
+    const result = await subjectService.getSubjects({
+      userId: DEMO_USER_ID,
+      difficulty: difficulty as string | undefined,
+      archived: parseBooleanQuery(archived),
+      sort: sort as string | undefined,
+    });
 
     return res.json(result.rows);
   } catch (err) {
@@ -137,18 +81,26 @@ export const getSubjects = async (req: Request, res: Response) => {
   }
 };
 
-//DELETE SUBJECT
 export const deleteSubject = async (req: Request, res: Response) => {
-  const { id } = req.params;
-
   try {
-    const tasks = await pool.query(
-      `SELECT status FROM tasks WHERE subject_id = $1`,
-      [id],
+    const { id } = req.params;
+    const subjectId = Number(id);
+
+    const subject = await subjectService.getSubjectById(
+      subjectId,
+      DEMO_USER_ID,
     );
 
+    if (!subject.rows[0]) {
+      return res.status(404).json({
+        error: 'Subject not found',
+      });
+    }
+
+    const tasks = await subjectService.getTasksForDeleteCheck(subjectId);
+
     const hasProgress = tasks.rows.some(
-      (t) => t.status === 'in_progress' || t.status === 'done',
+      (task) => task.status === 'in_progress' || task.status === 'done',
     );
 
     if (hasProgress) {
@@ -158,31 +110,42 @@ export const deleteSubject = async (req: Request, res: Response) => {
       });
     }
 
-    // safe delete all tasks (optional cleanup)
-    await pool.query(`DELETE FROM tasks WHERE subject_id = $1`, [id]);
+    await subjectService.deleteTasksBySubjectId(subjectId);
+    await subjectService.deleteSubjectById(subjectId);
 
-    await pool.query(`DELETE FROM subjects WHERE id = $1`, [id]);
-
-    res.json({ message: 'Subject deleted successfully' });
+    return res.json({
+      message: 'Subject deleted successfully',
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Error deleting subject' });
+    return res.status(500).json({ error: 'Error deleting subject' });
   }
 };
 
-// UPDATE SUBJECT
 export const updateSubject = async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  const { name, description, difficulty, color, overall_deadline } = req.body;
-
-  const fields: string[] = [];
-  const values: any[] = [];
-  let index = 1;
-
   try {
+    const { id } = req.params;
+    const subjectId = Number(id);
+
+    const { name, description, difficulty, color, overall_deadline } = req.body;
+
+    const subject = await subjectService.getSubjectById(
+      subjectId,
+      DEMO_USER_ID,
+    );
+
+    if (!subject.rows[0]) {
+      return res.status(404).json({
+        error: 'Subject not found',
+      });
+    }
+
+    const fields: string[] = [];
+    const values: any[] = [];
+    let index = 1;
+
     if (difficulty !== undefined) {
-      if (!allowedDifficulty.includes(difficulty)) {
+      if (!isValidDifficulty(difficulty)) {
         return res.status(400).json({ error: 'Invalid difficulty' });
       }
 
@@ -191,9 +154,10 @@ export const updateSubject = async (req: Request, res: Response) => {
     }
 
     if (name !== undefined) {
-      const existing = await pool.query(
-        `SELECT id FROM subjects WHERE user_id = $1 AND name = $2 AND id != $3`,
-        [1, name, id],
+      const existing = await subjectService.findSubjectByName(
+        DEMO_USER_ID,
+        name,
+        subjectId,
       );
 
       if (existing.rows.length > 0) {
@@ -217,17 +181,11 @@ export const updateSubject = async (req: Request, res: Response) => {
     }
 
     if (overall_deadline !== undefined) {
-      const deadlineDate = new Date(overall_deadline);
+      const deadlineValidation = validateFutureDate(overall_deadline);
 
-      if (isNaN(deadlineDate.getTime())) {
+      if (!deadlineValidation.valid) {
         return res.status(400).json({
-          error: 'Invalid deadline format',
-        });
-      }
-
-      if (deadlineDate < new Date()) {
-        return res.status(400).json({
-          error: 'Deadline cannot be in the past',
+          error: deadlineValidation.error,
         });
       }
 
@@ -241,16 +199,12 @@ export const updateSubject = async (req: Request, res: Response) => {
       });
     }
 
-    values.push(id);
-
-    const query = `
-      UPDATE subjects
-      SET ${fields.join(', ')}, updated_at = NOW()
-      WHERE id = $${index}
-      RETURNING *
-    `;
-
-    const result = await pool.query(query, values);
+    const result = await subjectService.updateSubject(
+      subjectId,
+      fields,
+      values,
+      index,
+    );
 
     return res.json({ data: result.rows[0] });
   } catch (err) {
@@ -259,22 +213,30 @@ export const updateSubject = async (req: Request, res: Response) => {
   }
 };
 
-// GET SUBJECT BY ID
 export const getSubjectById = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  try {
+    const { id } = req.params;
+    const subjectId = Number(id);
 
-  const subject = await pool.query(
-    `SELECT * FROM subjects WHERE id = $1 AND user_id = $2`,
-    [id, 1],
-  );
+    const subject = await subjectService.getSubjectById(
+      subjectId,
+      DEMO_USER_ID,
+    );
 
-  const tasks = await pool.query(
-    `SELECT * FROM tasks WHERE subject_id = $1 ORDER BY created_at DESC`,
-    [id],
-  );
+    if (!subject.rows[0]) {
+      return res.status(404).json({
+        error: 'Subject not found',
+      });
+    }
 
-  res.json({
-    subject: subject.rows[0],
-    tasks: tasks.rows,
-  });
+    const tasks = await subjectService.getSubjectTasks(subjectId);
+
+    return res.json({
+      subject: subject.rows[0],
+      tasks: tasks.rows,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: 'Error fetching subject' });
+  }
 };

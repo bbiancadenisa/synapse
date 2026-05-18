@@ -1,4 +1,4 @@
-import * as dailyStatsService from '../services/dailyStatsService';
+import * as dailyStatsService from '../services/dailyStats/dailyStatsService';
 import * as sessionBreakService from '../services/sessionBreakService';
 import * as sessionService from '../services/sessionService';
 import { emitSessionEvent } from '../ws/sessionGateway';
