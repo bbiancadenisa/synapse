@@ -41,3 +41,13 @@ export const formatDate = (date: string) => {
     year: 'numeric',
   });
 };
+
+export const formatTaskDeadline = (deadline?: string | null) => {
+  if (!deadline) return 'No deadline';
+
+  return new Date(deadline).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  });
+};

@@ -24,10 +24,12 @@ import {
   accordionSummarySx,
   accordionSx,
   createSessionButtonSx,
+  deadlineChipSx,
   deleteButtonSx,
   descriptionSx,
   editButtonSx,
   emptySessionsSx,
+  getPriorityChipSx,
   getStatusChipSx,
   metaTextSx,
   progressSx,
@@ -35,7 +37,11 @@ import {
   sessionsTitleSx,
   taskTitleSx,
 } from './TaskCard.styles';
-import { formatStatus, getTaskProgress } from './TaskCard.utils';
+import {
+  formatStatus,
+  formatTaskDeadline,
+  getTaskProgress,
+} from './TaskCard.utils';
 import { useTaskSessions } from './useTaskSession';
 
 export const TaskCard = ({
@@ -92,6 +98,18 @@ export const TaskCard = ({
                 size="small"
                 label={formatStatus(task.status)}
                 sx={getStatusChipSx(task.status)}
+              />
+
+              <Chip
+                size="small"
+                label={`Priority: ${task.priority}`}
+                sx={getPriorityChipSx(task.priority)}
+              />
+
+              <Chip
+                size="small"
+                label={`Deadline: ${formatTaskDeadline(task.deadline)}`}
+                sx={deadlineChipSx}
               />
 
               <Typography sx={metaTextSx}>

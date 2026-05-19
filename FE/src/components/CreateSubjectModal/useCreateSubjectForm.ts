@@ -39,7 +39,7 @@ export const useCreateSubjectForm = (
       description,
       difficulty,
       color,
-      overall_deadline: deadline.toISOString(),
+      overall_deadline: deadline.format('YYYY-MM-DDTHH:mm:ss'),
     });
 
     resetForm();

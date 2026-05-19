@@ -1,6 +1,10 @@
+import type { Subject } from '../../../types/subjectTypes';
+
+export const ACCENT_COLOR = '#6C63FF';
+
 export const pageSx = {
   minHeight: '100vh',
-  background: '#f8fafc',
+  background: 'linear-gradient(180deg, #f8fafc 0%, #f5f3ff 100%)',
   py: 5,
 };
 
@@ -9,9 +13,10 @@ export const loadingTextSx = {
 };
 
 export const cardSx = {
-  borderRadius: 2,
+  borderRadius: 3,
   border: '1px solid #e5e7eb',
-  background: '#ffffff',
+  background: 'rgba(255, 255, 255, 0.92)',
+  boxShadow: '0 14px 40px rgba(15, 23, 42, 0.05)',
 };
 
 export const headerCardSx = {
@@ -20,52 +25,78 @@ export const headerCardSx = {
 };
 
 export const subjectAccentSx = (color?: string) => ({
-  height: 8,
-  background: color || '#4f46e5',
+  height: 9,
+  background: color || ACCENT_COLOR,
 });
 
 export const subjectContentSx = {
-  p: { xs: 2.5, md: 3 },
+  p: { xs: 2.5, md: 3.25 },
 };
 
 export const titleSx = {
-  fontWeight: 600,
-  letterSpacing: '-0.03em',
+  fontWeight: 700,
+  letterSpacing: '-0.04em',
   color: '#111827',
 };
 
 export const chipBaseSx = {
-  borderRadius: 1.5,
+  height: 28,
+  borderRadius: 2,
+  fontSize: 12,
+  fontWeight: 600,
+  textTransform: 'capitalize',
 };
 
-export const difficultyChipSx = {
-  ...chipBaseSx,
-  textTransform: 'capitalize',
-  background: '#f1f5f9',
-  color: '#475569',
+export const getDifficultyChipSx = (difficulty: Subject['difficulty']) => {
+  const colors = {
+    low: {
+      background: '#ecfdf5',
+      color: '#047857',
+      border: '1px solid #a7f3d0',
+    },
+    medium: {
+      background: '#fff7ed',
+      color: '#c2410c',
+      border: '1px solid #fed7aa',
+    },
+    high: {
+      background: '#fef2f2',
+      color: '#b91c1c',
+      border: '1px solid #fecaca',
+    },
+  };
+
+  return {
+    ...chipBaseSx,
+    ...colors[difficulty],
+  };
 };
 
 export const deadlineChipSx = {
   ...chipBaseSx,
-  background: '#eef2ff',
-  color: '#4f46e5',
+  background: 'rgba(108, 99, 255, 0.1)',
+  color: ACCENT_COLOR,
+  border: '1px solid rgba(108, 99, 255, 0.22)',
 };
 
 export const tasksCountChipSx = {
   ...chipBaseSx,
   background: '#ecfdf5',
   color: '#047857',
+  border: '1px solid #a7f3d0',
 };
 
 export const outlinedButtonSx = {
   borderRadius: 2,
+  px: 2,
+  py: 0.85,
   textTransform: 'none',
-  fontWeight: 500,
-  borderColor: '#cbd5e1',
-  color: '#334155',
+  fontWeight: 600,
+  borderColor: '#d8b4fe',
+  color: ACCENT_COLOR,
   '&:hover': {
-    borderColor: '#94a3b8',
-    background: '#f8fafc',
+    borderColor: ACCENT_COLOR,
+    background: 'rgba(108, 99, 255, 0.08)',
   },
 };
 
@@ -74,11 +105,11 @@ export const primaryButtonSx = {
   px: 2.5,
   py: 1,
   textTransform: 'none',
-  fontWeight: 500,
-  background: '#4f46e5',
+  fontWeight: 600,
+  background: ACCENT_COLOR,
   boxShadow: 'none',
   '&:hover': {
-    background: '#4338ca',
+    background: '#5b52e8',
     boxShadow: 'none',
   },
 };
@@ -91,46 +122,60 @@ export const filterCardSx = {
 export const mutedTextSx = {
   fontSize: 14,
   color: '#64748b',
+  fontWeight: 500,
 };
 
 export const selectSx = {
   borderRadius: 2,
   fontSize: 14,
+  background: '#ffffff',
+  '& .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#e5e7eb',
+  },
+  '&:hover .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#c4b5fd',
+  },
+  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    borderColor: ACCENT_COLOR,
+  },
 };
 
 export const tasksCardSx = {
-  p: 2,
+  p: 2.25,
   ...cardSx,
 };
 
 export const sectionTitleSx = {
-  fontSize: 20,
-  fontWeight: 600,
+  fontSize: 21,
+  fontWeight: 700,
   color: '#111827',
-  letterSpacing: '-0.02em',
+  letterSpacing: '-0.03em',
 };
 
 export const sectionSubtitleSx = {
   mt: 0.5,
   fontSize: 14,
   color: '#64748b',
+  lineHeight: 1.6,
 };
 
 export const emptyTasksSx = {
-  p: 4,
-  borderRadius: 2,
-  border: '1px dashed #cbd5e1',
+  p: 4.5,
+  borderRadius: 3,
+  border: '1px dashed #c4b5fd',
   textAlign: 'center',
-  background: '#f8fafc',
+  background: 'rgba(108, 99, 255, 0.035)',
 };
 
 export const emptyTitleSx = {
-  fontSize: 16,
-  fontWeight: 500,
+  fontSize: 17,
+  fontWeight: 700,
+  color: '#111827',
 };
 
 export const emptySubtitleSx = {
   mt: 0.75,
   color: '#64748b',
   fontSize: 14,
+  lineHeight: 1.6,
 };
