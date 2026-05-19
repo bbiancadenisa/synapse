@@ -3,9 +3,11 @@ export type TaskCardStatus = 'todo' | 'in_progress' | 'done';
 export type TaskCardTask = {
   id: number;
   title: string;
+  description?: string | null;
+  deadline?: string;
   status: TaskCardStatus;
+  priority: 'low' | 'medium' | 'high';
   estimated_hours: number;
-  description?: string;
   total_study_ms?: number;
 };
 

@@ -45,7 +45,8 @@ export const useEditSubjectForm = ({
     description !== (subject.description || '') ||
     difficulty !== subject.difficulty ||
     color !== (subject.color || '#A5B4FC') ||
-    (deadline ? deadline.toISOString() : '') !== originalDeadline;
+    (deadline ? deadline.format('YYYY-MM-DDTHH:mm:ss') : '') !==
+      originalDeadline;
 
   const isFormValid = name.trim().length > 0 && !!deadline;
 
@@ -57,7 +58,7 @@ export const useEditSubjectForm = ({
       description,
       difficulty,
       color,
-      overall_deadline: deadline.toISOString(),
+      overall_deadline: deadline.format('YYYY-MM-DDTHH:mm:ss'),
     });
 
     onUpdated();

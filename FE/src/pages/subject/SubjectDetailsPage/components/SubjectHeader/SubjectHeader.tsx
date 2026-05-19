@@ -3,7 +3,7 @@ import type { Subject } from '../../../../../types/subjectTypes';
 import { formatDeadline } from '../../../../../utils/subjectDetailsPageUtils';
 import {
   deadlineChipSx,
-  difficultyChipSx,
+  getDifficultyChipSx,
   headerCardSx,
   outlinedButtonSx,
   subjectAccentSx,
@@ -35,6 +35,20 @@ export const SubjectHeader = ({ subject, tasksCount, onEdit }: Props) => {
               {subject.name}
             </Typography>
 
+            {subject.description && (
+              <Typography
+                sx={{
+                  mt: 1,
+                  maxWidth: 760,
+                  color: '#64748b',
+                  fontSize: 15,
+                  lineHeight: 1.7,
+                }}
+              >
+                {subject.description}
+              </Typography>
+            )}
+
             <Stack
               direction="row"
               spacing={1}
@@ -45,7 +59,7 @@ export const SubjectHeader = ({ subject, tasksCount, onEdit }: Props) => {
               <Chip
                 label={`Difficulty: ${subject.difficulty}`}
                 size="small"
-                sx={difficultyChipSx}
+                sx={getDifficultyChipSx(subject.difficulty)}
               />
 
               <Chip

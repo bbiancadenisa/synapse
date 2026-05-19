@@ -46,7 +46,7 @@ export const useEditTaskForm = ({ open, task, onClose, onUpdated }: Params) => {
       estimated_hours: estimatedHours,
       priority,
       status,
-      deadline: deadline.toISOString(),
+      deadline: deadline.format('YYYY-MM-DDTHH:mm:ss'),
     };
 
     await updateTask(task.id, payload);

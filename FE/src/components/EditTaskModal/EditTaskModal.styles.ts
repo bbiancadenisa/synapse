@@ -28,11 +28,11 @@ export const cancelButtonSx = {
   color: '#64748b',
 };
 
-export const saveButtonSx = (isFormValid: boolean) => ({
+export const saveButtonSx = (isFormValid: boolean, isDirty: boolean) => ({
   borderRadius: 2,
   textTransform: 'none',
   fontWeight: 500,
-  background: isFormValid ? '#4f46e5' : '#cbd5e1',
+  background: isFormValid && isDirty ? '#5b52e8' : '#cbd5e1',
   boxShadow: 'none',
   '&:hover': {
     background: isFormValid ? '#4338ca' : '#cbd5e1',

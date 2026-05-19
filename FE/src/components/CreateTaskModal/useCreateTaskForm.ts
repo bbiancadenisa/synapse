@@ -45,7 +45,7 @@ export const useCreateTaskForm = ({
       description,
       estimated_hours: estimatedHours,
       priority,
-      deadline: deadline.toISOString(),
+      deadline: deadline.format('YYYY-MM-DDTHH:mm:ss'),
     };
 
     await createTask(payload);

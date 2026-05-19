@@ -8,13 +8,20 @@ import {
   Typography,
 } from '@mui/material';
 import { useLocation, useNavigate } from 'react-router-dom';
+
+import synapseLogo from '../../assets/synapse-logo.jpeg';
 import { useAuth } from '../../context/AuthContext';
 import {
   activeNavButtonSx,
   appBarSx,
   brandSx,
+  brandWrapperSx,
+  logoSx,
   logoutButtonSx,
   navButtonSx,
+  navStackSx,
+  toolbarSx,
+  userEmailSx,
 } from './AppNavbar.styles';
 
 const navItems = [
@@ -36,12 +43,24 @@ export const AppNavbar = () => {
   return (
     <AppBar position="sticky" sx={appBarSx}>
       <Container maxWidth="lg">
-        <Toolbar disableGutters>
-          <Typography sx={brandSx}>Synapse</Typography>
+        <Toolbar disableGutters sx={toolbarSx}>
+          <Box sx={brandWrapperSx} onClick={() => navigate('/')}>
+            <Box
+              component="img"
+              src={synapseLogo}
+              alt="Synapse logo"
+              sx={logoSx}
+            />
 
-          <Stack direction="row" spacing={1} sx={{ ml: 4 }}>
+            <Typography sx={brandSx}>Synapse</Typography>
+          </Box>
+
+          <Stack direction="row" spacing={0.75} sx={navStackSx}>
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
+              const isActive =
+                item.path === '/'
+                  ? location.pathname === '/'
+                  : location.pathname.startsWith(item.path);
 
               return (
                 <Button
@@ -58,9 +77,7 @@ export const AppNavbar = () => {
           <Box sx={{ flex: 1 }} />
 
           <Stack direction="row" spacing={2} alignItems="center">
-            <Typography sx={{ fontSize: 14, color: '#64748b' }}>
-              {user?.email}
-            </Typography>
+            <Typography sx={userEmailSx}>{user?.email}</Typography>
 
             <Button onClick={handleLogout} sx={logoutButtonSx}>
               Logout

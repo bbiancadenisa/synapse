@@ -33,6 +33,22 @@ export const EditTaskModal = ({ open, task, onClose, onUpdated }: Props) => {
   const isFormValid =
     title.trim().length > 0 && estimatedHours > 0 && !!deadline;
 
+  const originalDeadline = task.deadline
+    ? dayjs(task.deadline).format('YYYY-MM-DDTHH:mm:ss')
+    : '';
+
+  const currentDeadline = deadline
+    ? deadline.format('YYYY-MM-DDTHH:mm:ss')
+    : '';
+
+  const isDirty =
+    title !== task.title ||
+    description !== (task.description || '') ||
+    estimatedHours !== task.estimated_hours ||
+    priority !== task.priority ||
+    status !== task.status ||
+    currentDeadline !== originalDeadline;
+
   useEffect(() => {
     if (!task) return;
 
@@ -53,7 +69,7 @@ export const EditTaskModal = ({ open, task, onClose, onUpdated }: Props) => {
       estimated_hours: estimatedHours,
       priority,
       status,
-      deadline: deadline.toISOString(),
+      deadline: deadline.format('YYYY-MM-DDTHH:mm:ss'),
     });
 
     onUpdated();
@@ -202,7 +218,7 @@ export const EditTaskModal = ({ open, task, onClose, onUpdated }: Props) => {
         <Button
           variant="contained"
           onClick={handleSave}
-          disabled={!isFormValid}
+          disabled={!isFormValid || !isDirty}
           sx={{
             borderRadius: 2,
             textTransform: 'none',

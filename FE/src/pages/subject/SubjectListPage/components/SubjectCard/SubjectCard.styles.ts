@@ -1,46 +1,48 @@
-import type { Subject } from '../../types/subjectTypes';
+import type { Subject } from '../../../../../types/subjectTypes';
+
+export const ACCENT_COLOR = '#6C63FF';
 
 export const cardSx = {
-  height: 210,
+  height: 220,
   display: 'flex',
   flexDirection: 'column',
-  borderRadius: 2,
+  borderRadius: 3,
   overflow: 'hidden',
   border: '1px solid #e5e7eb',
-  boxShadow: 'none',
+  boxShadow: '0 10px 30px rgba(15, 23, 42, 0.04)',
   background: '#ffffff',
   cursor: 'pointer',
   transition:
     'transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease',
   '&:hover': {
-    transform: 'translateY(-2px)',
-    borderColor: '#c7d2fe',
-    boxShadow: '0 10px 28px rgba(15, 23, 42, 0.08)',
+    transform: 'translateY(-3px)',
+    borderColor: '#c4b5fd',
+    boxShadow: '0 18px 45px rgba(108, 99, 255, 0.14)',
   },
 };
 
 export const accentSx = (color?: string) => ({
   height: 8,
   width: '100%',
-  background: color || '#4f46e5',
+  background: color || ACCENT_COLOR,
 });
 
 export const contentSx = {
   flex: 1,
-  p: 2,
+  p: 2.25,
 };
 
 export const titleSx = {
-  fontSize: 16,
-  fontWeight: 600,
+  fontSize: 17,
+  fontWeight: 700,
   lineHeight: 1.35,
   color: '#111827',
-  letterSpacing: '-0.01em',
+  letterSpacing: '-0.02em',
 };
 
 export const descriptionSx = {
   fontSize: 14,
-  lineHeight: 1.55,
+  lineHeight: 1.6,
   color: '#64748b',
 };
 
@@ -75,10 +77,11 @@ export const getDifficultyChipSx = (difficulty: Subject['difficulty']) => {
   };
 
   return {
-    height: 24,
-    borderRadius: 1.5,
+    height: 25,
+    borderRadius: 2,
+    px: 0.75,
     fontSize: 12,
-    fontWeight: 500,
+    fontWeight: 600,
     textTransform: 'capitalize',
     ...colors[difficulty],
   };

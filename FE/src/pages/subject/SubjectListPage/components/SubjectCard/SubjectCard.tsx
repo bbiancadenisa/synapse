@@ -1,6 +1,7 @@
 import { DeleteOutline } from '@mui/icons-material';
 import { Box, Card, Chip, IconButton, Stack, Typography } from '@mui/material';
-import type { Subject } from '../../types/subjectTypes';
+
+import type { Subject } from '../../../../../types/subjectTypes';
 import {
   accentSx,
   cardSx,
