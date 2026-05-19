@@ -28,8 +28,17 @@ export const useSubjectDetails = (subjectId?: string) => {
   const fetchSubject = async () => {
     if (!subjectId) return;
 
-    const data = await getSubjectById(numericSubjectId);
-    setSubject(data.subject);
+    try {
+      const data = await getSubjectById(numericSubjectId);
+      setSubject(data.subject);
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        navigate(-1);
+        return;
+      }
+
+      console.error(err);
+    }
   };
 
   const fetchTasks = async () => {
