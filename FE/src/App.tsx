@@ -4,6 +4,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/AppLayout/AppLayout';
 import { ProtectedRoute } from './components/ProtectedRoute/ProtectedRoute';
+import { AnalyticsPage } from './pages/analytics/AnalyticsPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { UserProfilePage } from './pages/profile/UserProfilePage';
@@ -48,6 +49,7 @@ function App() {
                 <Route path="/subjects" element={<SubjectsListPage />} />
                 <Route path="/subjects/:id" element={<SubjectDetailsPage />} />
                 <Route path="/session/:sessionId" element={<SessionPage />} />
+                <Route path="/analytics" element={<AnalyticsPage />} />
               </Route>
             </Route>
           </Routes>

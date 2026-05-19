@@ -1,6 +1,7 @@
 import cors from 'cors';
 import express from 'express';
 import { authMiddleware } from './middleware/authMiddleware';
+import analyticsRoutes from './routes/analytics';
 import authRoutes from './routes/authRoutes';
 import dailyStatsRoutes from './routes/dailyStats';
 import studySessionRoutes from './routes/studySession';
@@ -13,6 +14,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/analytics', authMiddleware, analyticsRoutes);
 app.use('/api/subjects', authMiddleware, subjectRoutes);
 app.use('/api/tasks', authMiddleware, taskRoutes);
 app.use('/api/study-sessions', authMiddleware, studySessionRoutes);
