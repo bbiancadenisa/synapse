@@ -20,6 +20,7 @@ import {
 const navItems = [
   { label: 'LifeStats', path: '/' },
   { label: 'Subjects', path: '/subjects' },
+  { label: 'Analytics', path: '/analytics' },
 ];
 
 export const AppNavbar = () => {
