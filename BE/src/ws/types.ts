@@ -35,6 +35,7 @@ export type SessionRuntimeState = {
 export type SessionEventType =
   | 'SESSION_STARTED'
   | 'SESSION_TIME_REACHED'
+  | 'SESSION_DISCARDED'
   | 'SESSION_ENDED'
   | 'SESSION_TIMEOUT'
   | 'BREAK_REMINDER'

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getSessionsByTaskId, type StudySession } from '../../services/session';
+import { getSessionsByTaskId, type StudySession } from '../services/session';
 
 export const useTaskSessions = (taskId: number) => {
   const [sessions, setSessions] = useState<StudySession[]>([]);

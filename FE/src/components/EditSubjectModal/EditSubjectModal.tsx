@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 
+import { useEditSubjectForm } from '../../hooks/useEditSubjectForm';
 import type { Difficulty, Subject } from '../../types/subjectTypes';
 import { ColorPicker } from '../ColorPicker/ColorPicker';
 import {
@@ -21,7 +22,6 @@ import {
   subtitleSx,
   titleSx,
 } from './EditSubjectModal.styles';
-import { useEditSubjectForm } from './useEditSubjectForm';
 
 type Props = {
   open: boolean;

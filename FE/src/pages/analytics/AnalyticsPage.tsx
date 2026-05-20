@@ -13,6 +13,7 @@ import { AnalyticsOverviewCards } from '../../components/Analytics/AnalyticsOver
 import { ProductivityByHourChart } from '../../components/Analytics/ProductivityByHourChart/ProductivityByHourChart';
 import { StudyActivityChart } from '../../components/Analytics/StudyActivityChart/StudyActivityChart';
 import { WellnessTrendChart } from '../../components/Analytics/WellnessTrendChart/WellnessTrendChart';
+import { useAnalytics } from '../../hooks/useAnalytics';
 import {
   loadingTextSx,
   pageSx,
@@ -21,7 +22,6 @@ import {
   subtitleSx,
   titleSx,
 } from './AnalyticsPage.styles';
-import { useAnalytics } from './useAnalytics';
 
 export const AnalyticsPage = () => {
   const { analytics, loading, range, setRange } = useAnalytics();

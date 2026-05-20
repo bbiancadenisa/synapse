@@ -10,6 +10,7 @@ import {
   Typography,
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers';
+import { useCreateTaskForm } from '../../hooks/useCreateTaskForm';
 import type { TaskPriority } from '../../types/taskTypes';
 import {
   cancelButtonSx,
@@ -19,7 +20,6 @@ import {
   subtitleSx,
   titleSx,
 } from './CreateTaskModal.styles';
-import { useCreateTaskForm } from './useCreateTaskForm';
 
 type Props = {
   open: boolean;

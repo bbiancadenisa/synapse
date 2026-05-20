@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers';
 
+import { useCreateSubjectForm } from '../../hooks/useCreateSubjectForm';
 import type {
   CreateSubjectPayload,
   Difficulty,
@@ -24,7 +25,6 @@ import {
   subtitleSx,
   titleSx,
 } from './CreateSubjectModal.styles';
-import { useCreateSubjectForm } from './useCreateSubjectForm';
 
 type Props = {
   open: boolean;

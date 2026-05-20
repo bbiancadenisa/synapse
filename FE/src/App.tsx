@@ -8,7 +8,7 @@ import { AnalyticsPage } from './pages/analytics/AnalyticsPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { UserProfilePage } from './pages/profile/UserProfilePage';
-import { SessionPage } from './pages/session/SessionDetailsPage/SessionDetailsPage';
+import { SessionPage } from './pages/session/SessionDetailsPage';
 import { SubjectDetailsPage } from './pages/subject/SubjectDetailsPage/SubjectDetailsPage';
 import { SubjectsListPage } from './pages/subject/SubjectListPage/SubjectsListPage';
 

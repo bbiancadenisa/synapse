@@ -160,3 +160,38 @@ export const getSessionsByTaskId = async (taskId: number, userId: number) => {
     [taskId, userId],
   );
 };
+
+export const deleteSessionCompletely = async (sessionId: number) => {
+  await pool.query(
+    `
+    DELETE FROM session_events
+    WHERE session_id = $1
+    `,
+    [sessionId],
+  );
+
+  await pool.query(
+    `
+    DELETE FROM study_session_breaks
+    WHERE session_id = $1
+    `,
+    [sessionId],
+  );
+
+  await pool.query(
+    `
+    DELETE FROM study_session_settings
+    WHERE session_id = $1
+    `,
+    [sessionId],
+  );
+
+  return pool.query(
+    `
+    DELETE FROM study_sessions
+    WHERE id = $1
+    RETURNING *
+    `,
+    [sessionId],
+  );
+};

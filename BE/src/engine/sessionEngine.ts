@@ -15,6 +15,7 @@ const IGNORE_COOLDOWN_MS = 5000;
 const MAX_IGNORE_COUNT = 3;
 const TEST_TIMEOUT_MS = 3 * 60 * 1000;
 const BREAK_PENALTY_INTERVAL_MS = 3 * 1000;
+const MINIMUM_SESSION_MS = 5 * 60 * 1000;
 
 const persistEvent = async (sessionId: number, type: string) => {
   try {
@@ -49,6 +50,10 @@ export const startSessionEngine = ({
   breakIntervalMinutes: number;
   breakDurationMinutes: number;
 }) => {
+  if (!userId) {
+    throw new Error('Cannot start session engine without userId');
+  }
+
   const now = Date.now();
 
   const state: SessionRuntimeState = {
@@ -127,18 +132,23 @@ const tickSession = async (sessionId: number) => {
         penaltySteps,
       );
 
+      console.log('Penalty result:', penaltyResult);
+      console.log('Penalty stats:', penaltyResult.stats);
       await emitAndPersist(sessionId, 'PENALTY_TRIGGERED', {
         reason: 'continued_study_without_break',
-        message: `You kept studying without taking a break. Energy -${penaltySteps}, Focus -${penaltySteps}, Stress +${penaltySteps}.`,
+        message:
+          'Your study health was affected because you continued studying without taking a break.',
         penalty: penaltyResult.penalty,
-        stats: {
-          energy: penaltyResult.stats.energy,
-          focus: penaltyResult.stats.focus,
-          stress: penaltyResult.stats.stress,
-          healthPoints: penaltyResult.stats.health_points,
-          burnoutRisk: penaltyResult.stats.burnout_risk,
-          healthMessage: penaltyResult.stats.health_message,
-        },
+        stats: penaltyResult.stats
+          ? {
+              energy: penaltyResult.stats.energy,
+              focus: penaltyResult.stats.focus,
+              stress: penaltyResult.stats.stress,
+              healthPoints: penaltyResult.stats.health_points,
+              burnoutRisk: penaltyResult.stats.burnout_risk,
+              healthMessage: penaltyResult.stats.health_message,
+            }
+          : null,
       });
 
       return;
@@ -146,6 +156,20 @@ const tickSession = async (sessionId: number) => {
 
     if (
       !session.timeReachedNotified &&
+      session.studyTimeMs >= session.plannedDurationMs
+    ) {
+      session.timeReachedNotified = true;
+      session.timeReachedAt = now;
+
+      updateSession(sessionId, session);
+
+      await emitAndPersist(sessionId, 'SESSION_TIME_REACHED', {
+        message:
+          'Planned study time completed. You can continue studying or end the session.',
+      });
+    }
+
+    if (
       !session.breakReminderPending &&
       session.studyTimeMs >= session.nextBreakAtMs
     ) {
@@ -190,7 +214,6 @@ export const takeManualBreak = async (sessionId: number) => {
   const session = getSession(sessionId);
 
   if (!session || session.status !== 'running') return;
-  if (session.timeReachedNotified) return;
 
   await startBreak(sessionId);
 };
@@ -198,6 +221,7 @@ export const takeManualBreak = async (sessionId: number) => {
 const startBreak = async (sessionId: number) => {
   const session = getSession(sessionId);
   if (!session || session.status !== 'running') return;
+  console.log('Break duration ms:', session.breakDurationMs);
 
   const now = Date.now();
 
@@ -252,13 +276,30 @@ export const ignoreBreak = async (sessionId: number) => {
 
     updateSession(sessionId, session);
 
+    const penaltyResult = await dailyStatsService.applyBreakIgnorePenalty(
+      session.userId,
+      1,
+    );
+
+    console.log('Penalty result:', penaltyResult);
+    console.log('Penalty stats:', penaltyResult.stats);
+
     await emitAndPersist(sessionId, 'PENALTY_TRIGGERED', {
       reason: 'three_break_reminders_ignored',
       message:
-        'You ignored three break reminders. Penalty mode is now active. Every 3 minutes without a break will reduce energy and focus, and increase stress.',
-      penaltyEveryMinutes: 3,
+        'Penalty mode is active because you ignored multiple break reminders.',
+      penalty: penaltyResult.penalty,
+      stats: penaltyResult.stats
+        ? {
+            energy: penaltyResult.stats.energy,
+            focus: penaltyResult.stats.focus,
+            stress: penaltyResult.stats.stress,
+            healthPoints: penaltyResult.stats.health_points,
+            burnoutRisk: penaltyResult.stats.burnout_risk,
+            healthMessage: penaltyResult.stats.health_message,
+          }
+        : null,
     });
-
     return;
   }
 
@@ -274,6 +315,7 @@ const endBreak = async (sessionId: number) => {
 
   if (session.currentBreakId !== null) {
     await sessionBreakService.endSessionBreak(session.currentBreakId);
+    await dailyStatsService.recalculateTodayStats(session.userId);
   }
 
   await sessionService.updateSessionStatus(
@@ -303,15 +345,40 @@ export const endSessionByUser = async (sessionId: number) => {
     updateSession(sessionId, session);
   }
 
-  await sessionService.endSession(
-    sessionId,
-    'completed',
-    session?.studyTimeMs ?? 0,
-  );
+  const studyTimeMs = session?.studyTimeMs ?? 0;
+
+  if (studyTimeMs < MINIMUM_SESSION_MS) {
+    emitSessionEvent({
+      sessionId,
+      type: 'SESSION_DISCARDED',
+      payload: {
+        reason: 'session_too_short',
+        studyTimeMs,
+      },
+    });
+
+    await sessionService.deleteSessionCompletely(sessionId);
+
+    removeSession(sessionId);
+
+    return {
+      saved: false,
+      reason: 'session_too_short',
+      studyTimeMs,
+    };
+  }
+
+  await sessionService.endSession(sessionId, 'completed', studyTimeMs);
+
   await emitAndPersist(sessionId, 'STOP_ACCEPTED');
   await emitAndPersist(sessionId, 'SESSION_ENDED');
 
   removeSession(sessionId);
+
+  return {
+    saved: true,
+    studyTimeMs,
+  };
 };
 
 export const timeoutSession = async (sessionId: number) => {
