@@ -1,10 +1,30 @@
-import { Box, Container, Stack, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Stack,
+  Typography,
+} from '@mui/material';
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   useSessionRuntime,
   type SessionConfig,
-} from '../../../hooks/useSessionRuntime';
-import { pageSx, titleSx } from './SessionDetailsPage.style';
+} from '../../hooks/useSessionRuntime';
+import {
+  confirmEndButtonSx,
+  continueStudyingButtonSx,
+  pageSx,
+  shortSessionDialogPaperSx,
+  shortSessionTextSx,
+  shortSessionTitleSx,
+  subtitleSx,
+  titleSx,
+} from './SessionDetailsPage.style';
 import { BreakReminderPanel } from './components/BreakReminderPanel';
 import { PenaltyPanel } from './components/PenaltyPanel';
 import { SessionActions } from './components/SessionActions';
@@ -13,6 +33,21 @@ import { SessionInfoChips } from './components/SessionInfChips';
 import { TimerCard } from './components/TimeCard';
 
 export const SessionPage = () => {
+  const [shortSessionModalOpen, setShortSessionModalOpen] = useState(false);
+
+  const handleRequestEndSession = () => {
+    if (session.studySeconds < 5 * 60) {
+      setShortSessionModalOpen(true);
+      return;
+    }
+
+    void session.handleEndSession();
+  };
+
+  const handleConfirmEndShortSession = () => {
+    setShortSessionModalOpen(false);
+    void session.handleEndSession();
+  };
   const location = useLocation();
 
   const config = location.state as SessionConfig | undefined;
@@ -23,12 +58,50 @@ export const SessionPage = () => {
     <Box sx={pageSx}>
       <Container maxWidth="md">
         <Stack spacing={4}>
+          <Dialog
+            open={shortSessionModalOpen}
+            onClose={() => setShortSessionModalOpen(false)}
+            fullWidth
+            maxWidth="xs"
+            PaperProps={{ sx: shortSessionDialogPaperSx }}
+          >
+            <DialogTitle sx={{ px: 3, pt: 3, pb: 1 }}>
+              <Typography sx={shortSessionTitleSx}>
+                Session too short
+              </Typography>
+            </DialogTitle>
+
+            <DialogContent sx={{ px: 3, pt: 1 }}>
+              <Typography sx={shortSessionTextSx}>
+                This study session is shorter than 5 minutes and will not be
+                saved to your statistics. Are you sure you want to end it?
+              </Typography>
+            </DialogContent>
+
+            <DialogActions sx={{ px: 3, pb: 3, pt: 2 }}>
+              <Button
+                onClick={() => setShortSessionModalOpen(false)}
+                sx={continueStudyingButtonSx}
+              >
+                Continue studying
+              </Button>
+
+              <Button
+                variant="contained"
+                onClick={handleConfirmEndShortSession}
+                sx={confirmEndButtonSx}
+              >
+                End session
+              </Button>
+            </DialogActions>
+          </Dialog>
+
           <Box textAlign="center">
             <Typography variant="h4" sx={titleSx}>
               Study Session
             </Typography>
 
-            <Typography color="text.secondary">
+            <Typography sx={subtitleSx}>
               Stay focused, take smart breaks, finish strong.
             </Typography>
           </Box>
@@ -84,9 +157,8 @@ export const SessionPage = () => {
 
           <SessionActions
             isOnBreak={session.isOnBreak}
-            sessionDone={session.sessionDone}
             onManualBreak={session.handleManualBreak}
-            onEndSession={session.handleEndSession}
+            onEndSession={handleRequestEndSession}
           />
         </Stack>
       </Container>

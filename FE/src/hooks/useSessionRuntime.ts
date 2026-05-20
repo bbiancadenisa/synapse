@@ -57,7 +57,7 @@ export const useSessionRuntime = (config?: SessionConfig) => {
   }, [breakSecondsLeft, breakTotalSeconds]);
 
   useEffect(() => {
-    if (!isStudyRunning || isOnBreak || sessionDone) return;
+    if (!isStudyRunning || isOnBreak) return;
 
     const interval = setInterval(() => {
       setStudySeconds((prev) => prev + 1);
@@ -67,16 +67,14 @@ export const useSessionRuntime = (config?: SessionConfig) => {
   }, [isStudyRunning, isOnBreak, sessionDone]);
 
   useEffect(() => {
-    if (!isOnBreak || sessionDone) return;
-
-    setBreakSecondsLeft(breakTotalSeconds);
+    if (!isOnBreak) return;
 
     const interval = setInterval(() => {
       setBreakSecondsLeft((prev) => Math.max(prev - 1, 0));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isOnBreak, breakTotalSeconds, sessionDone]);
+  }, [isOnBreak]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -106,23 +104,42 @@ export const useSessionRuntime = (config?: SessionConfig) => {
           break;
 
         case 'SESSION_TIME_REACHED':
+          setSessionDone(true);
+          setPenaltyMessage(
+            event.payload?.message ||
+              'Planned study time completed. You can continue studying or end the session.',
+          );
+          break;
         case 'SESSION_TIMEOUT':
           setSessionDone(true);
           setBreakReminder(false);
-          setIsStudyRunning(false);
           break;
 
         case 'PENALTY_TRIGGERED':
         case 'penalty_triggered':
+          console.log('PENALTY EVENT:', event);
+          console.log('PENALTY PAYLOAD:', event.payload);
+          console.log('PENALTY STATS:', event.payload?.stats);
           setPenaltyTriggered(true);
-          setBreakReminder(false);
           setPenaltyMessage(
             event.payload?.message ||
               'Penalty triggered. Your health stats were affected.',
           );
 
-          if (event.payload?.stats) {
-            setLiveStats(event.payload.stats);
+          const stats = event.payload?.stats;
+
+          if (stats) {
+            setLiveStats({
+              energy: Number(stats.energy ?? 0),
+              focus: Number(stats.focus ?? 0),
+              stress: Number(stats.stress ?? 0),
+              healthPoints: Number(
+                stats.healthPoints ?? stats.health_points ?? 0,
+              ),
+              burnoutRisk: stats.burnoutRisk ?? stats.burnout_risk ?? 'low',
+            });
+          } else {
+            setLiveStats(null);
           }
 
           break;

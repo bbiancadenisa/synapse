@@ -92,7 +92,7 @@ export const recalculateTodayStats = async (userId: number) => {
     burnoutRisk: calculated.burnoutRisk,
   });
 
-  return result.rows[0];
+  return result.rows[0] || (await getOrCreateTodayStats(userId));
 };
 
 export const applyBreakIgnorePenalty = async (userId: number, points = 1) => {

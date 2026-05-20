@@ -47,6 +47,7 @@ export const startStudySession = async (req: Request, res: Response) => {
 
     startSessionEngine({
       sessionId: session.id,
+      userId: userId,
       plannedDurationMinutes,
       breakIntervalMinutes,
       breakDurationMinutes,

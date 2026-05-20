@@ -1,16 +1,17 @@
 import { Button, Stack } from '@mui/material';
-import { actionButtonSx } from '../SessionDetailsPage.style';
+import {
+  actionButtonSx,
+  endSessionButtonSx,
+} from '../SessionDetailsPage.style';
 
 type Props = {
   isOnBreak: boolean;
-  sessionDone: boolean;
   onManualBreak: () => void;
   onEndSession: () => void;
 };
 
 export const SessionActions = ({
   isOnBreak,
-  sessionDone,
   onManualBreak,
   onEndSession,
 }: Props) => {
@@ -18,7 +19,7 @@ export const SessionActions = ({
     <Stack direction="row" spacing={2} justifyContent="center">
       <Button
         variant="contained"
-        disabled={isOnBreak || sessionDone}
+        disabled={isOnBreak}
         onClick={onManualBreak}
         sx={actionButtonSx}
       >
@@ -27,9 +28,8 @@ export const SessionActions = ({
 
       <Button
         variant="contained"
-        color="error"
         onClick={onEndSession}
-        sx={actionButtonSx}
+        sx={endSessionButtonSx}
       >
         End Session
       </Button>

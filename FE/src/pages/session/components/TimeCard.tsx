@@ -1,5 +1,5 @@
 import { Box, CircularProgress, Paper, Typography } from '@mui/material';
-import { formatTime } from '../../../../utils/sessionDetailsPageUtils';
+import { formatTime } from '../../../utils/sessionDetailsPageUtils';
 import {
   timerBaseProgressSx,
   timerCardSx,

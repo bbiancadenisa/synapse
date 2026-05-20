@@ -1,6 +1,7 @@
 import { Chip, Paper, Stack, Typography } from '@mui/material';
-import type { LiveStats } from '../../../../types/dailyStatsTypes';
+import type { LiveStats } from '../../../types/dailyStatsTypes';
 import {
+  penaltyChipSx,
   penaltyMessageSx,
   penaltyPanelSx,
   penaltyTitleSx,
@@ -13,7 +14,7 @@ type Props = {
 
 export const PenaltyPanel = ({ message, liveStats }: Props) => {
   return (
-    <Paper sx={penaltyPanelSx}>
+    <Paper elevation={0} sx={penaltyPanelSx}>
       <Stack spacing={1.5}>
         <Typography sx={penaltyTitleSx}>Health stats affected</Typography>
 
@@ -24,13 +25,28 @@ export const PenaltyPanel = ({ message, liveStats }: Props) => {
 
         {liveStats && (
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            <Chip label={`Energy: ${liveStats.energy ?? '-'}%`} />
-            <Chip label={`Focus: ${liveStats.focus ?? '-'}%`} />
-            <Chip label={`Stress: ${liveStats.stress ?? '-'}%`} />
-            <Chip label={`Health: ${liveStats.healthPoints ?? '-'}%`} />
+            <Chip
+              sx={penaltyChipSx}
+              label={`Energy: ${liveStats.energy ?? '-'}%`}
+            />
+            <Chip
+              sx={penaltyChipSx}
+              label={`Focus: ${liveStats.focus ?? '-'}%`}
+            />
+            <Chip
+              sx={penaltyChipSx}
+              label={`Stress: ${liveStats.stress ?? '-'}%`}
+            />
+            <Chip
+              sx={penaltyChipSx}
+              label={`Health: ${liveStats.healthPoints ?? '-'}%`}
+            />
 
             {liveStats.burnoutRisk && (
-              <Chip label={`Risk: ${liveStats.burnoutRisk}`} />
+              <Chip
+                sx={penaltyChipSx}
+                label={`Risk: ${liveStats.burnoutRisk}`}
+              />
             )}
           </Stack>
         )}
