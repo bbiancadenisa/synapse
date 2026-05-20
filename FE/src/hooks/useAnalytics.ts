@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getAnalyticsSummary } from '../../services/analytics';
-import type { AnalyticsSummary } from '../../types/analyticsTypes';
+import { getAnalyticsSummary } from '../services/analytics';
+import type { AnalyticsSummary } from '../types/analyticsTypes';
 
 export const useAnalytics = () => {
   const [range, setRange] = useState<1 | 7 | 30>(7);
