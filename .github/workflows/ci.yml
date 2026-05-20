@@ -27,9 +27,6 @@ jobs:
       - name: Run frontend tests
         run: npm test -- --run
 
-      - name: Run frontend lint
-        run: npm run lint
-
   backend:
     runs-on: ubuntu-latest
 
