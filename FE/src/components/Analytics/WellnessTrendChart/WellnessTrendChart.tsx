@@ -9,6 +9,12 @@ import {
   YAxis,
 } from 'recharts';
 import type { WellnessTrend } from '../../../types/analyticsTypes';
+import { formatChartDate } from '../../../utils/analyticsFormatter';
+import {
+  chartCardSx,
+  chartSubtitleSx,
+  chartTitleSx,
+} from '../AnalyticsChart.styles';
 
 type Props = {
   data: WellnessTrend[];
@@ -16,20 +22,33 @@ type Props = {
 
 export const WellnessTrendChart = ({ data }: Props) => {
   return (
-    <Paper
-      elevation={0}
-      sx={{ p: 2, borderRadius: 2, border: '1px solid #e5e7eb' }}
-    >
-      <Typography sx={{ fontSize: 16, fontWeight: 600, mb: 2 }}>
-        Energy, focus & stress over time
+    <Paper elevation={0} sx={chartCardSx}>
+      <Typography sx={chartTitleSx}>Wellness trend</Typography>
+
+      <Typography sx={chartSubtitleSx}>
+        X-axis shows the date. Y-axis shows your score from 0 to 100 for energy,
+        focus, and stress.
       </Typography>
 
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="date" />
-          <YAxis domain={[0, 100]} />
-          <Tooltip />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis dataKey="date" tickFormatter={formatChartDate} />
+          <YAxis
+            domain={[0, 100]}
+            label={{
+              value: 'Score',
+              angle: -90,
+              position: 'insideLeft',
+            }}
+          />
+          <Tooltip
+            labelFormatter={(value) => formatChartDate(String(value))}
+            formatter={(value, name) => [
+              `${value}%`,
+              String(name).charAt(0).toUpperCase() + String(name).slice(1),
+            ]}
+          />
           <Line
             type="monotone"
             dataKey="energy"
@@ -39,7 +58,7 @@ export const WellnessTrendChart = ({ data }: Props) => {
           <Line
             type="monotone"
             dataKey="focus"
-            stroke="#4f46e5"
+            stroke="#6C63FF"
             strokeWidth={2}
           />
           <Line

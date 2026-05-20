@@ -10,27 +10,46 @@ import {
 } from 'recharts';
 import type { ProductivityByHour } from '../../../types/analyticsTypes';
 
+import {
+  formatChartHour,
+  formatMinutes,
+} from '../../../utils/analyticsFormatter';
+import {
+  chartCardSx,
+  chartSubtitleSx,
+  chartTitleSx,
+} from '../AnalyticsChart.styles';
+
 type Props = {
   data: ProductivityByHour[];
 };
 
 export const ProductivityByHourChart = ({ data }: Props) => {
   return (
-    <Paper
-      elevation={0}
-      sx={{ p: 2, borderRadius: 2, border: '1px solid #e5e7eb' }}
-    >
-      <Typography sx={{ fontSize: 16, fontWeight: 600, mb: 2 }}>
-        Productivity by hour
+    <Paper elevation={0} sx={chartCardSx}>
+      <Typography sx={chartTitleSx}>Productivity by hour</Typography>
+
+      <Typography sx={chartSubtitleSx}>
+        X-axis shows the hour of the day. Y-axis shows how many study minutes
+        were recorded during that hour.
       </Typography>
 
       <ResponsiveContainer width="100%" height={260}>
         <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="hour" />
-          <YAxis />
-          <Tooltip />
-          <Bar dataKey="studyMinutes" fill="#4f46e5" radius={[6, 6, 0, 0]} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis dataKey="hour" tickFormatter={formatChartHour} />
+          <YAxis
+            label={{
+              value: 'Study minutes',
+              angle: -90,
+              position: 'insideLeft',
+            }}
+          />
+          <Tooltip
+            labelFormatter={(value) => formatChartHour(value as string)}
+            formatter={(value) => [formatMinutes(Number(value)), 'Study time']}
+          />
+          <Bar dataKey="studyMinutes" fill="#6C63FF" radius={[8, 8, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </Paper>
