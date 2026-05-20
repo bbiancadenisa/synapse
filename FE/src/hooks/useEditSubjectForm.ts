@@ -1,7 +1,7 @@
 import dayjs, { Dayjs } from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
-import { updateSubject } from '../../services/subject';
-import type { Difficulty, Subject } from '../../types/subjectTypes';
+import { updateSubject } from '../services/subject';
+import type { Difficulty, Subject } from '../types/subjectTypes';
 
 type Params = {
   open: boolean;

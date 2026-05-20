@@ -17,6 +17,7 @@ import {
   ExpandMoreOutlined,
 } from '@mui/icons-material';
 
+import { useTaskSessions } from '../../hooks/useTaskSession';
 import type { TaskCardProps } from '../../types/taskCardTypes';
 import { TaskSessionCard } from '../TaskSessionCard/TaskSessionCard';
 import {
@@ -42,7 +43,6 @@ import {
   formatTaskDeadline,
   getTaskProgress,
 } from './TaskCard.utils';
-import { useTaskSessions } from './useTaskSession';
 
 export const TaskCard = ({
   task,

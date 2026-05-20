@@ -1,10 +1,7 @@
 import { Dayjs } from 'dayjs';
 import { useState } from 'react';
-import type {
-  CreateSubjectPayload,
-  Difficulty,
-} from '../../types/subjectTypes';
-import { SUBJECT_COLORS } from '../../utils/constants';
+import type { CreateSubjectPayload, Difficulty } from '../types/subjectTypes';
+import { SUBJECT_COLORS } from '../utils/constants';
 
 export const useCreateSubjectForm = (
   onCreate: (data: CreateSubjectPayload) => void,

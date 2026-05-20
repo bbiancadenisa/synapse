@@ -1,7 +1,7 @@
 import { Dayjs } from 'dayjs';
 import { useState } from 'react';
-import { createTask } from '../../services/task';
-import type { CreateTaskPayload, TaskPriority } from '../../types/taskTypes';
+import { createTask } from '../services/task';
+import type { CreateTaskPayload, TaskPriority } from '../types/taskTypes';
 
 type Params = {
   subjectId: number;
