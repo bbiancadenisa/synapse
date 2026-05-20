@@ -9,13 +9,23 @@ import {
   updateSession,
 } from '../ws/sessionRegistry';
 import { SessionRuntimeState } from '../ws/types';
+import { SESSION_TIMING } from './sessionTimingConfig';
 
-const TICK_MS = 1000;
-const IGNORE_COOLDOWN_MS = 5000;
-const MAX_IGNORE_COUNT = 3;
-const TEST_TIMEOUT_MS = 3 * 60 * 1000;
-const BREAK_PENALTY_INTERVAL_MS = 3 * 1000;
-const MINIMUM_SESSION_MS = 5 * 60 * 1000;
+// const TICK_MS = 1000;
+// const IGNORE_COOLDOWN_MS = 5000;
+// const MAX_IGNORE_COUNT = 3;
+// const SESSION_TIMEOUT_AFTER_TIME_REACHED_MS = 3 * 60 * 1000;
+// const BREAK_PENALTY_INTERVAL_MS = 3 * 1000;
+// const MINIMUM_SESSION_MS = 5 * 60 * 1000;
+
+const {
+  TICK_MS,
+  IGNORE_COOLDOWN_MS,
+  MAX_IGNORE_COUNT,
+  SESSION_TIMEOUT_AFTER_TIME_REACHED_MS,
+  BREAK_PENALTY_INTERVAL_MS,
+  MINIMUM_SESSION_MS,
+} = SESSION_TIMING;
 
 const persistEvent = async (sessionId: number, type: string) => {
   try {
@@ -104,7 +114,7 @@ const tickSession = async (sessionId: number) => {
   if (
     session.timeReachedNotified &&
     session.timeReachedAt !== null &&
-    now - session.timeReachedAt >= TEST_TIMEOUT_MS
+    now - session.timeReachedAt >= SESSION_TIMEOUT_AFTER_TIME_REACHED_MS
   ) {
     await timeoutSession(sessionId);
     return;
