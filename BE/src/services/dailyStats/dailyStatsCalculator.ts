@@ -68,9 +68,32 @@ export const calculateDailyStats = ({
   //  study time contributes positively
   // focus contributes positively
   // stress contributes negatively
-  const productivityScore = clamp(
-    Math.round(totalStudyMinutes * 0.5 + focus * 0.4 - stress * 0.3),
-  );
+  let productivityScore = 0;
+
+  if (totalStudyMinutes >= 10) {
+    const studyScore = clamp(Math.round((totalStudyMinutes / 180) * 100));
+
+    const breakRatio =
+      totalStudyMinutes > 0 ? totalBreakMinutes / totalStudyMinutes : 0;
+
+    const breakScore =
+      breakRatio >= 0.15 && breakRatio <= 0.4
+        ? 100
+        : breakRatio > 0 && breakRatio < 0.15
+          ? 60
+          : breakRatio > 0.4
+            ? 75
+            : 40;
+
+    productivityScore = clamp(
+      Math.round(
+        studyScore * 0.35 +
+          focus * 0.3 +
+          (100 - stress) * 0.25 +
+          breakScore * 0.1,
+      ),
+    );
+  }
 
   // HEALTH POINTS CALCULATED, ENERGY IS 35% FOCUS 35% AND 100- STRESS
   const healthPoints = clamp(

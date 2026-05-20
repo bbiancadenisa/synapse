@@ -40,7 +40,7 @@ export const insertTodayStatsQuery = async (userId: number, today: string) => {
       0,
       0,
       0,
-      100,
+      0,
       100,
       'You are doing okay. Keep a balanced pace.',
       'low',

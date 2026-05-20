@@ -17,20 +17,6 @@ export const pageSubtitleSx = {
   maxWidth: 560,
 };
 
-export const primaryButtonSx = {
-  borderRadius: 2,
-  px: 2.5,
-  py: 1,
-  textTransform: 'none',
-  fontWeight: 500,
-  background: '#4f46e5',
-  boxShadow: 'none',
-  '&:hover': {
-    background: '#4338ca',
-    boxShadow: 'none',
-  },
-};
-
 export const loadingTextSx = {
   color: '#64748b',
 };

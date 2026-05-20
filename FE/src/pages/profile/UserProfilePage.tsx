@@ -1,5 +1,4 @@
-import { Box, Button, Container, Grid, Stack, Typography } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { Box, Container, Grid, Stack, Typography } from '@mui/material';
 import { useDailyStats } from '../../hooks/useDailyStats';
 import { ActivityCard } from './components/ActivityCard/ActivityCard';
 import { HealthOverviewCard } from './components/HealthOverviewCard/HealthOverviewCard';
@@ -10,12 +9,9 @@ import {
   pageSubtitleSx,
   pageSx,
   pageTitleSx,
-  primaryButtonSx,
 } from './UserProfilePage.styles';
 
 export const UserProfilePage = () => {
-  const navigate = useNavigate();
-
   const { stats, sleepHours, setSleepHours, loading, handleSaveSleep } =
     useDailyStats();
 
@@ -49,14 +45,6 @@ export const UserProfilePage = () => {
                 risk for today.
               </Typography>
             </Box>
-
-            <Button
-              variant="contained"
-              onClick={() => navigate('/subjects')}
-              sx={primaryButtonSx}
-            >
-              Go to subjects
-            </Button>
           </Stack>
 
           <HealthOverviewCard stats={stats} />
@@ -67,7 +55,7 @@ export const UserProfilePage = () => {
             </Grid>
 
             <Grid item xs={12} md={4}>
-              <StatCard label="Focus" value={stats.focus} color="#4f46e5" />
+              <StatCard label="Focus" value={stats.focus} color="#6C63FF" />
             </Grid>
 
             <Grid item xs={12} md={4}>
