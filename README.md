@@ -2,7 +2,7 @@ Synapse
 
 Synapse is a full-stack productivity and study management application focused on helping students manage tasks, track study sessions, and monitor productivity and wellbeing.
 
-ALL CHANGES ARE ON DEVELOP BRANCH
+ALL CHANGES ARE ON MASTER BRANCH
 
 Tech Stack
 
